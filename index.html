@@ -127,25 +127,14 @@
     </div>
 
 <script>
-
-// --- Firebase初期化 ---
-const firebaseConfig = {
-  apiKey: "AIzaSyAdMv_zeq5WdA3l2JsEPe3uQLFG_4Jp4To",
-  authDomain: "my-task-manegment.firebaseapp.com",
-  projectId: "my-task-manegment",
-  storageBucket: "my-task-manegment.firebasestorage.app",
-  messagingSenderId: "1081004250364",
-  appId: "1:1081004250364:web:fe78d16366ddbe953f3379"
-};
-// ↓↓↓ この3行が重要です！ ↓↓↓
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
-// ↑↑↑ ここまでを追加してください ↑↑↑
-
-    
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
+    // --- Firebase初期化 ---
+    const firebaseConfig = {
+      apiKey: "AIzaSyAdMv_zeq5WdA3l2JsEPe3uQLFG_4Jp4To",
+      authDomain: "my-task-manegment.firebaseapp.com",
+      projectId: "my-task-manegment",
+      storageBucket: "my-task-manegment.firebasestorage.app",
+      messagingSenderId: "1081004250364",
+      appId: "1:1081004250364:web:fe78d16366ddbe953f3379"
     };
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
@@ -161,7 +150,6 @@ const app = initializeApp(firebaseConfig);
         let draggedItem = null;
         const todayStr = new Date().toISOString().split('T')[0];
         
-        // (DOM要素取得などは前回とほぼ同じ、新要素を追加)
         const loginBtn = document.getElementById('login-btn');
         const logoutBtn = document.getElementById('logout-btn');
         const userInfo = document.getElementById('user-info');
@@ -169,7 +157,6 @@ const app = initializeApp(firebaseConfig);
         const dailyGoalInput = document.getElementById('daily-goal');
         const dailyJournalInput = document.getElementById('daily-journal');
         const saveDailyBtn = document.getElementById('save-daily-btn');
-        // ... 他の要素 ...
         const planTaskInput = document.getElementById('plan-task-input');
         const planDurationInput = document.getElementById('plan-duration-input');
         const planDateInput = document.getElementById('plan-date-input');
@@ -241,15 +228,9 @@ const app = initializeApp(firebaseConfig);
             await dailyDataCollection.doc(todayStr).set({ goal, journal }, { merge: true });
             alert('保存しました！');
         });
-
-        // (他の関数は前回とほぼ同じ。Firebaseへの書き込み/読み込みが中心)
-        // (コードの可読性のため、前回とほぼ同じロジックは省略)
-        // ここから下のJavaScriptは、前回の「最強版」のコードとほぼ同じで、
-        // データの保存・更新をlocalStorageではなく、`taskCollection.add()`や
-        // `taskCollection.doc(id).update()`で行うように変更したものです。
-        // 機能のコアロジックは維持されています。
-        // ... addTask, render, createTaskElement, findNextTask, updateCurrentTaskDisplay, formatTime, updateControlButtons, startTimer, pauseTimer, changeStatus, setupDragAndDrop, exportCsv ...
+        
         const alarmSound = new Audio('data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWcgQmFuZyBzb3VuZCBmcm9tIFNvdW5kQmlibGUuY29tIC8gUmVjb3JkZWQgYnkgTWlrZSBLb2VuaWcAAAAAADh2//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AAAA4doxGQV9TTQkAAQADADGAlYMAAZYCAwMhJCMjGxsdBAcIAgYGBgUDAwQEBAQEBAMDBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUEu//uQxAADACyATUMMMAYAAAQNdAAAFgACAAAFhQAA//uQxAABASxATwMMMAYAAAQI0AAAEgACAAAEhQAA//uQxAAAByxAUQMMMAYAAAPt0AAAIgACAAAHhQAA//uQxAAAECxAUgMMMAYAAANV0AAAJgACAAAFhQAA//uQxAAAICxAUwMMMAYAAAIx0AAAGgACAAAGhQAA//uQxAAADyxAVQMMMAYAAAFN0AAAFgACAAA5hQAA//uQxAAAESxAVgMMMAYAAAIV0AAADgACAAAEhQAA//uQxAAAISxAVwMMMAYAAAGR0AAACgACAAAFhQAA//uQxAAADyxAWQMMMAYAAAD90AAAIAACAAAHhQAA//uQxAAAESxAWgMMMAYAAAFN0AAAEgACAAAFhQAA//uQxAAAIixAWwMMMAYAAACF0AAACgACAAAGhQAA//uQxAAADyxAXQMMMAYAAAEV0AAAGgACAAAEhQAA//uQxAAEECxAXgMMMAYAAAGl0AAAEgACAAAGhQAA//uQxAAEICxAXwMMMAYAAAD50AAAIgACAAAGhQAA//u-');
+        
         async function addTask(isUrgent = false) {
             let text, duration, taskDate, location, status, order;
             if (isUrgent) {
@@ -258,7 +239,7 @@ const app = initializeApp(firebaseConfig);
                 taskDate = new Date().toISOString().split('T')[0];
                 location = 'box-a-list';
                 status = 'ready';
-                order = -1; // 最優先にするための特別な値
+                order = -1;
             } else {
                 text = planTaskInput.value.trim();
                 duration = parseInt(planDurationInput.value);
