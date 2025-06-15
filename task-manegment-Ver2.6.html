@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>【最終決定版】インテリジェント業務管理アプリ</title>
+    <!-- Firebase SDKの読み込み -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; line-height: 1.5; }
+        .container { max-width: 1600px; margin: 0 auto; }
+        .auth-bar { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .auth-bar button { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; color: white; }
+        #login-btn { background-color: #4285F4; } #logout-btn { background-color: #d9534f; }
+        .main-content { display: none; }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 25px; }
+        h2 { font-size: 1.3em; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; margin-top: 15px; color: #34495e; }
+        h3 { font-size: 1.0em; font-weight: 600; margin-top: 0; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid; }
+        .main-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 25px; }
+        .planning-column, .execution-column { display: flex; flex-direction: column; gap: 25px; }
+        .panel { background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .input-form { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: center; }
+        .input-form input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1em; }
+        .input-form input[type="text"] { flex-grow: 1; }
+        .input-form input[type="number"] { width: 70px; text-align: center; }
+        .input-form button { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; color: white; transition: background-color 0.3s; }
+        #add-plan-btn { background-color: #3498db; }
+        #add-urgent-btn { background-color: #e74c3c; }
+        .task-list { list-style-type: none; padding: 10px; min-height: 60px; border: 2px dashed #e0e0e0; border-radius: 8px; transition: background-color 0.2s; }
+        .task-list.drag-over { background-color: #eaf5ff; }
+        .task-item { background-color: #ecf0f1; padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; cursor: grab; border-left: 5px solid #3498db; user-select: none; }
+        .task-item.dragging { opacity: 0.4; }
+        .task-item .task-text { font-weight: 500; word-break: break-all; }
+        .task-item .task-details { font-size: 0.85em; color: #7f8c8d; margin-left: 10px; white-space: nowrap; }
+        .task-item.urgent { border-left-color: #e74c3c; background-color: #fdeded; }
+        .execution-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        #timer-clock { font-size: 2.5em; font-weight: bold; letter-spacing: 2px; }
+        #current-task-display { text-align: left; } #current-task-display p { margin: 0; font-size: 1.1em; }
+        .priority-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .priority-box { padding: 15px; border-radius: 8px; }
+        #box-a { background: #fff5f5; border: 1px solid #e57373; } #box-a h3 { color: #c62828; border-color: #ef9a9a; }
+        #box-b { background: #f1f8e9; border: 1px solid #aed581; } #box-b h3 { color: #558b2f; border-color: #c5e1a5; }
+        #box-c { background: #fffde7; border: 1px solid #ffd54f; } #box-c h3 { color: #f9a825; border-color: #ffe082; }
+        #box-d { background: #f5f5f5; border: 1px solid #e0e0e0; } #box-d h3 { color: #616161; border-color: #eee; }
+        .execution-controls { margin-top: 15px; display: flex; justify-content: center; gap: 10px; }
+        .execution-controls button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .daily-input { width: 100%; box-sizing: border-box; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .daily-panel button { background-color: #27ae60; width: 100%; padding: 8px; }
+        #実績-panel .task-item { cursor: default; }
+        .task-item.completed { background-color: #d4edda; border-left-color: #28a745; }
+        .task-item.canceled { background-color: #f8d7da; border-left-color: #dc3545; opacity: 0.8; }
+        .export-button { width: 100%; padding: 12px; margin-top: 15px; font-size: 1em; border: none; border-radius: 8px; cursor: pointer; color: white; }
+        #export-plan-btn { background-color: #2980b9; } #export-実績-btn { background-color: #8e44ad; }
+        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="auth-bar">
+            <span id="user-info"></span>
+            <button id="login-btn">Googleアカウントでログイン</button>
+            <button id="logout-btn" style="display: none;">ログアウト</button>
+        </div>
+        <div id="main-content" class="main-content">
+             <h1>🚀【最終決定版】インテリジェント業務管理アプリ</h1>
+            <div class="main-grid">
+                <div class="planning-column">
+                    <div class="panel daily-panel">
+                        <h2>本日のフォーカス</h2>
+                        <label for="daily-goal"><strong>本日の目標</strong></label>
+                        <input type="text" id="daily-goal" class="daily-input" placeholder="今日達成したい最も重要なこと">
+                        <label for="daily-journal"><strong>本日のジャーナル</strong></label>
+                        <textarea id="daily-journal" class="daily-input" rows="4" placeholder="一日の終わりに振り返りを記録しよう"></textarea>
+                        <button id="save-daily-btn">目標とジャーナルを保存</button>
+                    </div>
+                    <div id="plan-panel" class="panel">
+                        <h2>計画タスク</h2>
+                        <div class="input-form">
+                            <input type="text" id="plan-task-input" placeholder="タスク名">
+                            <input type="number" id="plan-duration-input" value="30" min="1" title="予定時間(分)">
+                            <input type="date" id="plan-date-input" title="実施予定日">
+                            <button id="add-plan-btn">計画に追加</button>
+                        </div>
+                        <ul id="plan-list" class="task-list"></ul>
+                        <button id="export-plan-btn" class="export-button">📋 計画をCSV出力</button>
+                    </div>
+                    <div id="実績-panel" class="panel">
+                        <h2>実績</h2>
+                        <ul id="実績-list" class="task-list"></ul>
+                        <button id="export-実績-btn" class="export-button">📈 実績をCSV出力</button>
+                    </div>
+                </div>
+                <div class="execution-column">
+                    <div id="execution-panel" class="panel">
+                        <h2>実行と分類</h2>
+                        <div class="execution-top">
+                            <div id="current-task-display"><p>実行タスクがありません</p></div>
+                            <div id="timer-clock">00:00</div>
+                        </div>
+                        <div class="execution-controls">
+                            <button id="start-btn" disabled>▶️ 開始/再開</button>
+                            <button id="pause-btn" disabled>⏸️ 一時停止</button>
+                            <button id="complete-btn" disabled>✅ 完了</button>
+                            <button id="cancel-btn" disabled>⏹️ 中止</button>
+                        </div>
+                        <hr style="margin: 20px 0; border: 1px solid #eee;">
+                        <div id="urgent-task-panel">
+                            <h3>割り込みタスク</h3>
+                            <div class="input-form">
+                                <input type="text" id="urgent-task-input" placeholder="緊急タスク名">
+                                <input type="number" id="urgent-duration-input" value="15" min="1">
+                                <button id="add-urgent-btn">最優先に追加</button>
+                            </div>
+                        </div>
+                        <div class="priority-grid">
+                            <div id="box-a" class="priority-box"><h3>🔥 緊急＆重要<br><small>(今すぐ取り組むべきタスク)</small></h3><ul id="box-a-list" class="task-list"></ul></div>
+                            <div id="box-b" class="priority-box"><h3>🌱 重要＆非緊急<br><small>(計画的に取り組むべきタスク)</small></h3><ul id="box-b-list" class="task-list"></ul></div>
+                            <div id="box-c" class="priority-box"><h3>⚡️ 緊急＆非重要<br><small>(移譲できるタスク)</small></h3><ul id="box-c-list" class="task-list"></ul></div>
+                            <div id="box-d" class="priority-box"><h3>🗑️ 非緊急 & 非重要<br><small>(削除できるタスク)</small></h3><ul id="box-d-list" class="task-list"></ul></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- Firebase初期化 ---
+    const firebaseConfig = {
+        /* ★★★ YOUR FIREBASE CONFIG HERE ★★★ */
+        // Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAdMv_zeq5WdA3l2JsEPe3uQLFG_4Jp4To",
+  authDomain: "my-task-manegment.firebaseapp.com",
+  projectId: "my-task-manegment",
+  storageBucket: "my-task-manegment.firebasestorage.app",
+  messagingSenderId: "1081004250364",
+  appId: "1:1081004250364:web:fe78d16366ddbe953f3379"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        // --- 変数定義 ---
+        let tasks = [];
+        let taskCollection;
+        let dailyDataCollection;
+        let unsubscribeTasks, unsubscribeDaily;
+        let timerInterval = null;
+        let draggedItem = null;
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        // (DOM要素取得などは前回とほぼ同じ、新要素を追加)
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userInfo = document.getElementById('user-info');
+        const mainContent = document.getElementById('main-content');
+        const dailyGoalInput = document.getElementById('daily-goal');
+        const dailyJournalInput = document.getElementById('daily-journal');
+        const saveDailyBtn = document.getElementById('save-daily-btn');
+        // ... 他の要素 ...
+        const planTaskInput = document.getElementById('plan-task-input');
+        const planDurationInput = document.getElementById('plan-duration-input');
+        const planDateInput = document.getElementById('plan-date-input');
+        const addPlanBtn = document.getElementById('add-plan-btn');
+        const allTaskLists = document.querySelectorAll('.task-list');
+        const urgentTaskInput = document.getElementById('urgent-task-input');
+        const urgentDurationInput = document.getElementById('urgent-duration-input');
+        const addUrgentBtn = document.getElementById('add-urgent-btn');
+        const currentTaskDisplay = document.getElementById('current-task-display');
+        const timerClock = document.getElementById('timer-clock');
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const completeBtn = document.getElementById('complete-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const exportPlanBtn = document.getElementById('export-plan-btn');
+        const export実績Btn = document.getElementById('export-実績-btn');
+
+        // --- 認証状態の監視 ---
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                userInfo.textContent = `${user.displayName} さん`;
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+                mainContent.style.display = 'block';
+                taskCollection = db.collection('users').doc(user.uid).collection('tasks');
+                dailyDataCollection = db.collection('users').doc(user.uid).collection('daily_data');
+                loadAllData();
+            } else {
+                userInfo.textContent = '';
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+                mainContent.style.display = 'none';
+                if (unsubscribeTasks) unsubscribeTasks();
+                if (unsubscribeDaily) unsubscribeDaily();
+                tasks = [];
+                render();
+            }
+        });
+
+        loginBtn.addEventListener('click', () => {
+            const provider = new firebase.auth.GoogleAuthProvider();
+            auth.signInWithPopup(provider);
+        });
+        logoutBtn.addEventListener('click', () => auth.signOut());
+
+        function loadAllData() {
+            if (unsubscribeTasks) unsubscribeTasks();
+            unsubscribeTasks = taskCollection.onSnapshot(snapshot => {
+                tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                render();
+            });
+
+            if (unsubscribeDaily) unsubscribeDaily();
+            unsubscribeDaily = dailyDataCollection.doc(todayStr).onSnapshot(doc => {
+                if (doc.exists) {
+                    const data = doc.data();
+                    dailyGoalInput.value = data.goal || '';
+                    dailyJournalInput.value = data.journal || '';
+                } else {
+                    dailyGoalInput.value = '';
+                    dailyJournalInput.value = '';
+                }
+            });
+        }
+        
+        saveDailyBtn.addEventListener('click', async () => {
+            const goal = dailyGoalInput.value;
+            const journal = dailyJournalInput.value;
+            await dailyDataCollection.doc(todayStr).set({ goal, journal }, { merge: true });
+            alert('保存しました！');
+        });
+
+        // (他の関数は前回とほぼ同じ。Firebaseへの書き込み/読み込みが中心)
+        // (コードの可読性のため、前回とほぼ同じロジックは省略)
+        // ここから下のJavaScriptは、前回の「最強版」のコードとほぼ同じで、
+        // データの保存・更新をlocalStorageではなく、`taskCollection.add()`や
+        // `taskCollection.doc(id).update()`で行うように変更したものです。
+        // 機能のコアロジックは維持されています。
+        // ... addTask, render, createTaskElement, findNextTask, updateCurrentTaskDisplay, formatTime, updateControlButtons, startTimer, pauseTimer, changeStatus, setupDragAndDrop, exportCsv ...
+        const alarmSound = new Audio('data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWcgQmFuZyBzb3VuZCBmcm9tIFNvdW5kQmlibGUuY29tIC8gUmVjb3JkZWQgYnkgTWlrZSBLb2VuaWcAAAAAADh2//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AAAA4doxGQV9TTQkAAQADADGAlYMAAZYCAwMhJCMjGxsdBAcIAgYGBgUDAwQEBAQEBAMDBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUEu//uQxAADACyATUMMMAYAAAQNdAAAFgACAAAFhQAA//uQxAABASxATwMMMAYAAAQI0AAAEgACAAAEhQAA//uQxAAAByxAUQMMMAYAAAPt0AAAIgACAAAHhQAA//uQxAAAECxAUgMMMAYAAANV0AAAJgACAAAFhQAA//uQxAAAICxAUwMMMAYAAAIx0AAAGgACAAAGhQAA//uQxAAADyxAVQMMMAYAAAFN0AAAFgACAAA5hQAA//uQxAAAESxAVgMMMAYAAAIV0AAADgACAAAEhQAA//uQxAAAISxAVwMMMAYAAAGR0AAACgACAAAFhQAA//uQxAAADyxAWQMMMAYAAAD90AAAIAACAAAHhQAA//uQxAAAESxAWgMMMAYAAAFN0AAAEgACAAAFhQAA//uQxAAAIixAWwMMMAYAAACF0AAACgACAAAGhQAA//uQxAAADyxAXQMMMAYAAAEV0AAAGgACAAAEhQAA//uQxAAEECxAXgMMMAYAAAGl0AAAEgACAAAGhQAA//uQxAAEICxAXwMMMAYAAAD50AAAIgACAAAGhQAA//u-');
+        async function addTask(isUrgent = false) {
+            let text, duration, taskDate, location, status, order;
+            if (isUrgent) {
+                text = urgentTaskInput.value.trim();
+                duration = parseInt(urgentDurationInput.value);
+                taskDate = new Date().toISOString().split('T')[0];
+                location = 'box-a-list';
+                status = 'ready';
+                order = -1; // 最優先にするための特別な値
+            } else {
+                text = planTaskInput.value.trim();
+                duration = parseInt(planDurationInput.value);
+                taskDate = planDateInput.value;
+                location = 'plan-list';
+                status = 'planned';
+                order = tasks.filter(t => t.location === location).length;
+            }
+            if (!text || duration <= 0 || (isUrgent ? false : !taskDate)) {
+                alert('必要な情報をすべて入力してください。');
+                return;
+            }
+            const newTaskData = { text, plannedDuration: duration, timeLeft: duration * 60, status, location, plannedDate: taskDate, actualDate: null, isUrgent, order, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+            await taskCollection.add(newTaskData);
+            if (isUrgent) urgentTaskInput.value = ''; else planTaskInput.value = '';
+        }
+        function render() {
+            const sortedTasks = sortTasksForRender();
+            allTaskLists.forEach(list => list.innerHTML = '');
+            sortedTasks.forEach(task => {
+                const taskListEl = document.getElementById(task.location);
+                if (taskListEl) {
+                    const taskItem = createTaskElement(task);
+                    taskListEl.appendChild(taskItem);
+                }
+            });
+            updateCurrentTaskDisplay();
+        }
+        function sortTasksForRender() { return tasks.slice().sort((a, b) => (a.order || 0) - (b.order || 0)); }
+        function createTaskElement(task) {
+            const item = document.createElement('li');
+            item.className = `task-item ${task.status} ${task.isUrgent ? 'urgent' : ''}`;
+            item.dataset.id = task.id;
+            item.setAttribute('draggable', !['completed', 'canceled'].includes(task.status));
+            item.innerHTML = `<span class="task-text">${task.text}</span> <span class="task-details">${task.plannedDuration}分 / 予定:${task.plannedDate}</span>`;
+            if (['completed', 'canceled'].includes(task.status)) { item.innerHTML += `<span class="task-details">実施日:${task.actualDate}</span>`; }
+            return item;
+        }
+        function findNextTask() {
+            const activeTask = tasks.find(t => ['working', 'paused'].includes(t.status));
+            if (activeTask) return activeTask;
+            const priorityOrder = ['box-a-list', 'box-b-list', 'box-c-list', 'box-d-list'];
+            for (const listId of priorityOrder) {
+                const task = sortTasksForRender().find(t => t.location === listId);
+                if (task) return task;
+            }
+            return null;
+        }
+        function updateCurrentTaskDisplay() {
+            const currentTask = findNextTask();
+            if (!currentTask) {
+                currentTaskDisplay.innerHTML = `<p>実行タスクがありません</p>`;
+                timerClock.textContent = '00:00';
+                updateControlButtons('initial');
+                return;
+            }
+            currentTaskDisplay.innerHTML = `<p>${currentTask.text}</p><small>予定: ${currentTask.plannedDuration}分</small>`;
+            timerClock.textContent = formatTime(currentTask.timeLeft);
+            updateControlButtons(currentTask.status);
+        }
+        function formatTime(seconds) { return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`; }
+        function updateControlButtons(status) {
+            startBtn.disabled = !['ready', 'paused'].includes(status);
+            pauseBtn.disabled = status !== 'working';
+            completeBtn.disabled = !['ready', 'working', 'paused'].includes(status);
+            cancelBtn.disabled = !['ready', 'working', 'paused'].includes(status);
+        }
+        async function startTimer() {
+            const task = findNextTask();
+            if (!task || task.status === 'working') return;
+            const dataToUpdate = { status: 'working' };
+            if (!task.actualDate) dataToUpdate.actualDate = new Date().toISOString().split('T')[0];
+            await updateTask(task.id, dataToUpdate);
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const currentTask = tasks.find(t => t.id === task.id);
+                if (!currentTask || currentTask.status !== 'working') return clearInterval(timerInterval);
+                const newTimeLeft = currentTask.timeLeft - 1;
+                updateTask(currentTask.id, { timeLeft: newTimeLeft });
+                if (newTimeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    alarmSound.play();
+                    alert(`「${currentTask.text}」の予定時間が終了しました！`);
+                    updateTask(currentTask.id, { status: 'paused' });
+                }
+            }, 1000);
+        }
+        function pauseTimer() {
+            const task = tasks.find(t => t.status === 'working');
+            if (task) { clearInterval(timerInterval); updateTask(task.id, { status: 'paused' }); }
+        }
+        function changeStatus(status) {
+            const task = findNextTask();
+            if (!task) return;
+            clearInterval(timerInterval);
+            const dataToUpdate = { status, location: '実績-list' };
+            if (!task.actualDate) dataToUpdate.actualDate = new Date().toISOString().split('T')[0];
+            updateTask(task.id, dataToUpdate);
+        }
+        async function updateTask(taskId, data) { await taskCollection.doc(String(taskId)).update(data); }
+        function setupDragAndDrop() {
+            document.addEventListener('dragstart', e => { if (e.target.classList.contains('task-item')) { draggedItem = e.target; setTimeout(() => e.target.classList.add('dragging'), 0); } });
+            document.addEventListener('dragend', () => { if (draggedItem) draggedItem.classList.remove('dragging'); });
+            allTaskLists.forEach(list => {
+                list.addEventListener('dragover', e => { e.preventDefault(); list.classList.add('drag-over'); const afterElement = getDragAfterElement(list, e.clientY); if (draggedItem) { if (afterElement == null) list.appendChild(draggedItem); else list.insertBefore(draggedItem, afterElement); } });
+                list.addEventListener('dragleave', () => list.classList.remove('drag-over'));
+                list.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    list.classList.remove('drag-over');
+                    const droppedItemId = draggedItem.dataset.id;
+                    const newOrderIds = Array.from(list.children).map(item => item.dataset.id);
+                    const batch = db.batch();
+                    newOrderIds.forEach((id, index) => {
+                        const taskDocRef = taskCollection.doc(String(id));
+                        const updates = { location: list.id, order: index };
+                        const task = tasks.find(t => t.id === id);
+                        if (list.id !== 'plan-list' && task.status === 'planned') { updates.status = 'ready'; }
+                        batch.update(taskDocRef, updates);
+                    });
+                    await batch.commit();
+                });
+            });
+        }
+        function getDragAfterElement(container, y) { const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')]; return draggableElements.reduce((closest, child) => { const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2; if (offset < 0 && offset > closest.offset) return { offset, element: child }; return closest; }, { offset: Number.NEGATIVE_INFINITY }).element; }
+        function exportCsv(type) {
+            let data, header, filename;
+            if (type === 'plan') { data = tasks.filter(t => t.location === 'plan-list'); if (data.length === 0) return alert('出力する計画がありません。'); header = ['タスク名', '実施予定日', '予定時間(分)']; filename = '計画.csv'; }
+            else { data = tasks.filter(t => t.location === '実績-list'); if (data.length === 0) return alert('出力する実績がありません。'); header = ['タスク名', 'ステータス', '実施予定日', '実施日', '予定時間(分)']; filename = '実績.csv'; }
+            const rows = data.map(t => { const row = [`"${t.text.replace(/"/g, '""')}"`]; if (type === 'plan') row.push(t.plannedDate, t.plannedDuration); else row.push(t.status, t.plannedDate, t.actualDate, t.plannedDuration); return row; });
+            const csvContent = "data:text/csv;charset=utf-8,\uFEFF" + [header.join(','), ...rows.map(e => e.join(','))].join('\n');
+            const link = document.createElement('a'); link.setAttribute('href', encodeURI(csvContent)); link.setAttribute('download', filename); link.click();
+        }
+        
+        // --- 初期化 ---
+        planDateInput.valueAsDate = new Date();
+        setupDragAndDrop();
+        render();
+    });
+</script>
+</body>
+</html>
