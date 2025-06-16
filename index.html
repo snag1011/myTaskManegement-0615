@@ -127,22 +127,20 @@
     </div>
 
 <script>
-
-// Import the functions you need from the SDKs you need
-// --- Firebase初期化 ---
-const firebaseConfig = {
-    apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
-    authDomain: "my-private-task-manegment.firebaseapp.com",
-    projectId: "my-private-task-manegment",
-    storageBucket: "my-private-task-manegment.firebasestorage.app",
-    messagingSenderId: "272952129117",
-    appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4",
-    measurementId: "G-NRTVNKPLF6"
-};
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
-const firebaseConfig = {
+    // --- Firebase初期化 ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
+        authDomain: "my-private-task-manegment.firebaseapp.com",
+        projectId: "my-private-task-manegment",
+        storageBucket: "my-private-task-manegment.appspot.com",
+        messagingSenderId: "272952129117",
+        appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4",
+        measurementId: "G-NRTVNKPLF6"
+    };
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
 
     document.addEventListener('DOMContentLoaded', () => {
         // --- 変数定義 ---
@@ -208,7 +206,7 @@ const firebaseConfig = {
 
         function loadAllData() {
             if (unsubscribeTasks) unsubscribeTasks();
-            unsubscribeTasks = taskCollection.onSnapshot(snapshot => {
+            unsubscribeTasks = taskCollection.orderBy("order").onSnapshot(snapshot => {
                 tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 render();
             });
