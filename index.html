@@ -128,17 +128,21 @@
 
 <script>
     // --- Firebase初期化 ---
-    const firebaseConfig = {
-      apiKey: "AIzaSyAdMv_zeq5WdA3l2JsEPe3uQLFG_4Jp4To",
-      authDomain: "my-task-manegment.firebaseapp.com",
-      projectId: "my-task-manegment",
-      storageBucket: "my-task-manegment.firebasestorage.app",
-      messagingSenderId: "1081004250364",
-      appId: "1:1081004250364:web:fe78d16366ddbe953f3379"
-    };
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-    const auth = firebase.auth();
+
+// --- Firebase初期化 ---
+const firebaseConfig = {
+  apiKey: "AIzaSyAdMv_zeq5WdA3l2JsEPe3uQLFG_4Jp4To",
+  authDomain: "my-task-manegment.firebaseapp.com",
+  projectId: "my-task-manegment",
+  storageBucket: "my-task-manegment.firebasestorage.app",
+  messagingSenderId: "1081004250364",
+  appId: "1:1081004250364:web:fe78d16366ddbe953f3379"
+};
+// ↓↓↓ この3行が重要です！ ↓↓↓
+firebase.initializeApp(firebaseConfig);
+const db = firebase.firestore();
+const auth = firebase.auth();
+// ↑↑↑ ここまでを追加してください ↑↑↑
 
     document.addEventListener('DOMContentLoaded', () => {
         // --- 変数定義 ---
