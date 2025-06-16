@@ -131,19 +131,17 @@
 // Import the functions you need from the SDKs you need
 // --- Firebase初期化 ---
 const firebaseConfig = {
-  apiKey: "AIzaSy... (あなたのAPIキー)",
-  authDomain: "my-private-task-manegment.firebaseapp.com",
-  projectId: "my-private-task-manegment",
-  storageBucket: "my-private-task-manegment.appspot.com", // ← .web.app ではなく .appspot.com の可能性あり
-  messagingSenderId: "...",
-  appId: "..."
+    apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
+    authDomain: "my-private-task-manegment.firebaseapp.com",
+    projectId: "my-private-task-manegment",
+    storageBucket: "my-private-task-manegment.firebasestorage.app",
+    messagingSenderId: "272952129117",
+    appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4",
+    measurementId: "G-NRTVNKPLF6"
 };
-
-// この3行でFirebaseを正しく起動します
-firebase.initializeApp(firebaseConfig);
-const db = firebase.firestore();
-const auth = firebase.auth();
-
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
 const firebaseConfig = {
 
     document.addEventListener('DOMContentLoaded', () => {
