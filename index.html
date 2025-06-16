@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>【調査モード】インテリジェント業務管理アプリ</title>
+    <title>【最終完成版】インテリジェント業務管理アプリ</title>
     <!-- Firebase SDKの読み込み -->
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <style>
-        /* CSSは変更なしなので省略 */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; line-height: 1.5; }
         .container { max-width: 1600px; margin: 0 auto; }
         .auth-bar { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 20px; }
@@ -33,9 +32,13 @@
         .task-list.drag-over { background-color: #eaf5ff; }
         .task-item { background-color: #ecf0f1; padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; cursor: grab; border-left: 5px solid #3498db; user-select: none; }
         .task-item.dragging { opacity: 0.4; }
+        .task-item .task-content { flex-grow: 1; }
         .task-item .task-text { font-weight: 500; word-break: break-all; }
         .task-item .task-details { font-size: 0.85em; color: #7f8c8d; margin-left: 10px; white-space: nowrap; }
         .task-item.urgent { border-left-color: #e74c3c; background-color: #fdeded; }
+        .delete-plan-btn { background: none; border: none; color: #c0392b; cursor: pointer; font-size: 1.5em; font-weight: bold; opacity: 0; transition: opacity 0.2s; padding: 0 8px; line-height: 1; }
+        .task-item:hover .delete-plan-btn { opacity: 0.6; }
+        .delete-plan-btn:hover { opacity: 1; }
         .execution-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
         #timer-clock { font-size: 2.5em; font-weight: bold; letter-spacing: 2px; }
         #current-task-display { text-align: left; } #current-task-display p { margin: 0; font-size: 1.1em; }
@@ -59,14 +62,13 @@
 </head>
 <body>
     <div class="container">
-        <!-- (HTML部分は変更なしなので省略) -->
         <div class="auth-bar">
             <span id="user-info"></span>
             <button id="login-btn">Googleアカウントでログイン</button>
             <button id="logout-btn" style="display: none;">ログアウト</button>
         </div>
         <div id="main-content" class="main-content">
-             <h1>🚀【調査モード】インテリジェント業務管理アプリ</h1>
+             <h1>🚀【最終完成版】インテリジェント業務管理アプリ</h1>
             <div class="main-grid">
                 <div class="planning-column">
                     <div class="panel daily-panel">
@@ -127,6 +129,7 @@
             </div>
         </div>
     </div>
+
 <script>
     // --- Firebase初期化 ---
     const firebaseConfig = {
@@ -142,7 +145,6 @@
     const auth = firebase.auth();
 
     document.addEventListener('DOMContentLoaded', () => {
-        // --- 変数定義 ---
         let tasks = [];
         let taskCollection;
         let dailyDataCollection;
@@ -174,8 +176,8 @@
         const cancelBtn = document.getElementById('cancel-btn');
         const exportPlanBtn = document.getElementById('export-plan-btn');
         const export実績Btn = document.getElementById('export-実績-btn');
+        const planList = document.getElementById('plan-list');
 
-        // --- 認証状態の監視 ---
         auth.onAuthStateChanged(user => {
             if (user) {
                 userInfo.textContent = `${user.displayName} さん`;
@@ -209,7 +211,6 @@
                 tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 render();
             });
-
             if (unsubscribeDaily) unsubscribeDaily();
             unsubscribeDaily = dailyDataCollection.doc(todayStr).onSnapshot(doc => {
                 if (doc.exists) {
@@ -224,23 +225,13 @@
         }
         
         saveDailyBtn.addEventListener('click', async () => {
-            console.log("「目標とジャーナルを保存」ボタンがクリックされました。");
-            const goal = dailyGoalInput.value;
-            const journal = dailyJournalInput.value;
-            try {
-                await dailyDataCollection.doc(todayStr).set({ goal, journal }, { merge: true });
-                console.log("目標とジャーナルの保存に成功しました。");
-                alert('保存しました！');
-            } catch (error) {
-                console.error("目標とジャーナルの保存中にエラー:", error);
-                alert("保存中にエラーが発生しました。");
-            }
+            await dailyDataCollection.doc(todayStr).set({ goal: dailyGoalInput.value, journal: dailyJournalInput.value }, { merge: true });
+            alert('保存しました！');
         });
         
         const alarmSound = new Audio('data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWcgQmFuZyBzb3VuZCBmcm9tIFNvdW5kQmlibGUuY29tIC8gUmVjb3JkZWQgYnkgTWlrZSBLb2VuaWcAAAAAADh2//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AAAA4doxGQV9TTQkAAQADADGAlYMAAZYCAwMhJCMjGxsdBAcIAgYGBgUDAwQEBAQEBAMDBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUEu//uQxAADACyATUMMMAYAAAQNdAAAFgACAAAFhQAA//uQxAABASxATwMMMAYAAAQI0AAAEgACAAAEhQAA//uQxAAAByxAUQMMMAYAAAPt0AAAIgACAAAHhQAA//uQxAAAECxAUgMMMAYAAANV0AAAJgACAAAFhQAA//uQxAAAICxAUwMMMAYAAAIx0AAAGgACAAAGhQAA//uQxAAADyxAVQMMMAYAAAFN0AAAFgACAAA5hQAA//uQxAAAESxAVgMMMAYAAAIV0AAADgACAAAEhQAA//uQxAAAISxAVwMMMAYAAAGR0AAACgACAAAFhQAA//uQxAAADyxAWQMMMAYAAAD90AAAIAACAAAHhQAA//uQxAAAESxAWgMMMAYAAAFN0AAAEgACAAAFhQAA//uQxAAAIixAWwMMMAYAAACF0AAACgACAAAGhQAA//uQxAAADyxAXQMMMAYAAAEV0AAAGgACAAAEhQAA//uQxAAEECxAXgMMMAYAAAGl0AAAEgACAAAGhQAA//uQxAAEICxAXwMMMAYAAAD50AAAIgACAAAGhQAA//u-');
         
         async function addTask(isUrgent = false) {
-            console.log("addTask 関数が呼び出されました。", { isUrgent });
             let text, duration, taskDate, location, status, order;
             if (isUrgent) {
                 text = urgentTaskInput.value.trim();
@@ -257,22 +248,13 @@
                 status = 'planned';
                 order = tasks.filter(t => t.location === location).length;
             }
-            console.log("取得した入力値:", { text, duration, taskDate });
             if (!text || !duration || duration <= 0 || (isUrgent ? false : !taskDate)) {
-                console.error("入力値が不正です。処理を中断しました。");
                 alert('タスク名、0より大きい予定時間、実施予定日をすべて正しく入力してください。');
                 return;
             }
-            console.log("入力値は正常です。Firestoreにデータを追加します。");
             const newTaskData = { text, plannedDuration: duration, timeLeft: duration * 60, status, location, plannedDate: taskDate, actualDate: null, isUrgent, order, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
-            try {
-                const docRef = await taskCollection.add(newTaskData);
-                console.log("Firestoreへのタスク追加に成功しました。ドキュメントID:", docRef.id);
-                if (isUrgent) urgentTaskInput.value = ''; else planTaskInput.value = '';
-            } catch (error) {
-                console.error("Firestoreへのタスク追加中にエラーが発生しました:", error);
-                alert("タスクの保存中にエラーが発生しました。コンソールを確認してください。");
-            }
+            await taskCollection.add(newTaskData);
+            if (isUrgent) urgentTaskInput.value = ''; else planTaskInput.value = '';
         }
 
         function render() {
@@ -293,10 +275,26 @@
             item.className = `task-item ${task.status} ${task.isUrgent ? 'urgent' : ''}`;
             item.dataset.id = task.id;
             item.setAttribute('draggable', !['completed', 'canceled'].includes(task.status));
-            item.innerHTML = `<span class="task-text">${task.text}</span> <span class="task-details">${task.plannedDuration}分 / 予定:${task.plannedDate}</span>`;
-            if (['completed', 'canceled'].includes(task.status)) { item.innerHTML += `<span class="task-details">実施日:${task.actualDate}</span>`; }
+
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'task-content';
+            contentDiv.innerHTML = `<span class="task-text">${task.text}</span><span class="task-details">${task.plannedDuration}分 / 予定:${task.plannedDate}</span>`;
+
+            if (['completed', 'canceled'].includes(task.status)) {
+                contentDiv.innerHTML = `<span class="task-text">${task.text}</span><span class="task-details">実施日:${task.actualDate}</span>`;
+            }
+            item.appendChild(contentDiv);
+
+            if (task.location === 'plan-list') {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-plan-btn';
+                deleteBtn.title = '計画から削除';
+                deleteBtn.innerHTML = '×';
+                item.appendChild(deleteBtn);
+            }
             return item;
         }
+
         function findNextTask() {
             const activeTask = tasks.find(t => ['working', 'paused'].includes(t.status));
             if (activeTask) return activeTask;
@@ -334,20 +332,17 @@
             await updateTask(task.id, dataToUpdate);
             clearInterval(timerInterval);
             timerInterval = setInterval(async () => {
-                // DBから最新のタスク情報を取得する代わりに、ローカルのタスク情報を使う
-                const currentTask = tasks.find(t => t.id === task.id);
-                if (!currentTask || currentTask.status !== 'working') return clearInterval(timerInterval);
-                const newTimeLeft = currentTask.timeLeft - 1;
-                // UIを先に更新
+                const currentTaskFromDB = tasks.find(t => t.id === task.id);
+                if (!currentTaskFromDB || currentTaskFromDB.status !== 'working') return clearInterval(timerInterval);
+                const newTimeLeft = currentTaskFromDB.timeLeft - 1;
                 timerClock.textContent = formatTime(newTimeLeft);
-                // DBへの書き込みは非同期で行う
-                await updateTask(currentTask.id, { timeLeft: newTimeLeft });
-
                 if (newTimeLeft <= 0) {
                     clearInterval(timerInterval);
                     alarmSound.play();
-                    alert(`「${currentTask.text}」の予定時間が終了しました！`);
-                    await updateTask(currentTask.id, { status: 'paused' });
+                    alert(`「${currentTaskFromDB.text}」の予定時間が終了しました！`);
+                    await updateTask(currentTaskFromDB.id, { status: 'paused', timeLeft: 0 });
+                } else {
+                    await updateTask(currentTaskFromDB.id, { timeLeft: newTimeLeft });
                 }
             }, 1000);
         }
@@ -378,7 +373,7 @@
                     const batch = db.batch();
                     newOrderIds.forEach((id, index) => {
                         const taskDocRef = taskCollection.doc(String(id));
-                        const task = tasks.find(t => t.id === id) || {status: 'planned'}; // 念のため
+                        const task = tasks.find(t => t.id === id) || {status: 'planned'};
                         const updates = { location: list.id, order: index };
                         if (list.id !== 'plan-list' && task.status === 'planned') { updates.status = 'ready'; }
                         batch.update(taskDocRef, updates);
@@ -397,16 +392,29 @@
             const link = document.createElement('a'); link.setAttribute('href', encodeURI(csvContent)); link.setAttribute('download', filename); link.click();
         }
         
-        // --- 初期化 ---
+        addPlanBtn.addEventListener('click', () => addTask(false));
+        addUrgentBtn.addEventListener('click', () => addTask(true));
+        startBtn.addEventListener('click', startTimer);
+        pauseBtn.addEventListener('click', pauseTimer);
+        completeBtn.addEventListener('click', () => changeStatus('completed'));
+        cancelBtn.addEventListener('click', () => changeStatus('canceled'));
+        exportPlanBtn.addEventListener('click', () => exportCsv('plan'));
+        export実績Btn.addEventListener('click', () => exportCsv('実績'));
+        
+        planList.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-plan-btn')) {
+                const taskItem = e.target.closest('.task-item');
+                const taskId = taskItem.dataset.id;
+                const taskText = taskItem.querySelector('.task-text').textContent;
+                if (confirm(`計画タスク「${taskText}」を本当に削除しますか？`)) {
+                    await taskCollection.doc(taskId).delete();
+                }
+            }
+        });
+        
         planDateInput.valueAsDate = new Date();
         setupDragAndDrop();
         render();
-
-        // ★★★ デバッグ用のイベントリスナー ★★★
-        addPlanBtn.addEventListener('click', () => {
-             console.log("「計画に追加」ボタンのクリックイベントが発生しました。");
-             addTask(false);
-        });
     });
 </script>
 </body>
