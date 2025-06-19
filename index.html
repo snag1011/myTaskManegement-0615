@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>【最終完成版 Ver.2.0】インテリジェント業務管理アプリ</title>
+    <title>【最終完成版 Ver.2.1】インテリジェント業務管理アプリ</title>
     <!-- Firebase SDKの読み込み -->
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <style>
-        /* CSSは変更なし */
         body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; line-height: 1.5; }
         .container { max-width: 1600px; margin: 0 auto; }
         .auth-bar { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 20px; }
@@ -72,7 +71,7 @@
             <button id="logout-btn" style="display: none;">ログアウト</button>
         </div>
         <div id="main-content" class="main-content">
-             <h1>🚀【最終完成版 Ver.2.0】業務管理アプリ</h1>
+             <h1>🚀【最終完成版 Ver.2.1】業務管理アプリ</h1>
              <div class="date-selector-panel">
                 <input type="date" id="main-date-picker">
             </div>
@@ -157,7 +156,6 @@
         let dailyDataCollection;
         let unsubscribeTasks, unsubscribeDaily;
         let timerInterval = null;
-        let draggedItem = null;
         
         const mainDatePicker = document.getElementById('main-date-picker');
         const loginBtn = document.getElementById('login-btn');
@@ -210,7 +208,7 @@
         logoutBtn.addEventListener('click', () => auth.signOut());
 
         function loadAllDataForDate(dateStr) {
-            if (!auth.currentUser) return;
+            if (!auth.currentUser || !dateStr) return;
             if (unsubscribeTasks) unsubscribeTasks();
             unsubscribeTasks = taskCollection.where("plannedDate", "==", dateStr).orderBy("order").onSnapshot(snapshot => {
                 tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -259,10 +257,10 @@
                 status = 'planned';
                 order = tasks.filter(t => t.location === location && t.plannedDate === taskDate).length;
             }
-            if (!text || !duration || duration <= 0) {
-                alert('タスク名と0より大きい予定時間を入力してください。'); return;
+            if (!text || !duration || duration <= 0 || !taskDate) {
+                alert('タスク名、0より大きい予定時間、実施予定日をすべて正しく入力してください。'); return;
             }
-            const newTaskData = { text, plannedDuration: duration, status, location, plannedDate: taskDate, actualDate: null, isUrgent, order, createdAt: firebase.firestore.FieldValue.serverTimestamp(), workTime: 0, breakTime: 0 };
+            const newTaskData = { text, plannedDuration: duration, status, location, plannedDate: taskDate, actualDate: null, isUrgent, order, createdAt: firebase.firestore.FieldValue.serverTimestamp(), workTime: 0, breakTime: 0, initialWorkTime: 0 };
             await taskCollection.add(newTaskData);
             if (isUrgent) urgentTaskInput.value = ''; else planTaskInput.value = '';
         }
@@ -324,7 +322,7 @@
             }
             const remainingTime = (currentTask.plannedDuration * 60) - (currentTask.workTime || 0);
             currentTaskDisplay.innerHTML = `<p>${currentTask.text}</p><small>予定: ${currentTask.plannedDuration}分</small>`;
-            timerClock.textContent = formatTime(remainingTime);
+            timerClock.textContent = formatTime(remainingTime < 0 ? 0 : remainingTime);
             updateControlButtons(currentTask.status);
         }
         function formatTime(seconds) { return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`; }
@@ -338,16 +336,16 @@
         async function startTimer() {
             const task = findNextTask();
             if (!task || task.status === 'working') return;
-            const dataToUpdate = { status: 'working', startTime: Date.now() };
-            if (!task.actualDate) dataToUpdate.actualDate = new Date().toISOString().split('T')[0];
-            await updateTask(task.id, dataToUpdate);
+            const updates = { status: 'working', startTime: Date.now(), initialWorkTime: task.workTime || 0 };
+            if (!task.actualDate) updates.actualDate = new Date().toISOString().split('T')[0];
+            await updateTask(task.id, updates);
             
             clearInterval(timerInterval);
             timerInterval = setInterval(() => {
                 const currentTask = tasks.find(t => t.id === task.id);
                 if (!currentTask || currentTask.status !== 'working') return clearInterval(timerInterval);
-                const elapsed = Math.floor((Date.now() - (currentTask.startTime || Date.now())) / 1000);
-                const workTime = (currentTask.initialWorkTime || 0) + elapsed;
+                const elapsed = Math.floor((Date.now() - currentTask.startTime) / 1000);
+                const workTime = currentTask.initialWorkTime + elapsed;
                 const remainingTime = (currentTask.plannedDuration * 60) - workTime;
                 
                 timerClock.textContent = formatTime(remainingTime < 0 ? 0 : remainingTime);
@@ -363,48 +361,77 @@
             const task = tasks.find(t => t.status === 'working');
             if (task) {
                 clearInterval(timerInterval);
-                const elapsed = Math.floor((Date.now() - (task.startTime || Date.now())) / 1000);
-                const newWorkTime = (task.initialWorkTime || 0) + elapsed;
-                await updateTask(task.id, { status: 'paused', workTime: newWorkTime, initialWorkTime: newWorkTime });
+                const elapsed = Math.floor((Date.now() - task.startTime) / 1000);
+                const newWorkTime = task.initialWorkTime + elapsed;
+                await updateTask(task.id, { status: 'paused', workTime: newWorkTime });
             }
         }
         
         async function changeStatus(status) {
             const task = findNextTask();
             if (!task) return;
-            await pauseTimer(); // タイマーを止めて作業時間を更新
+            if (task.status === 'working') await pauseTimer();
             const finalTaskState = tasks.find(t => t.id === task.id);
             await updateTask(task.id, { status, location: '実績-list' });
         }
 
         async function updateTask(taskId, data) { await taskCollection.doc(String(taskId)).update(data); }
+        
         function setupDragAndDrop() {
-            document.addEventListener('dragstart', e => { if (e.target.classList.contains('task-item')) { draggedItem = e.target; setTimeout(() => e.target.classList.add('dragging'), 0); } });
-            document.addEventListener('dragend', () => { if (draggedItem) draggedItem.classList.remove('dragging'); });
+            let draggedItemId = null;
+            document.addEventListener('dragstart', e => {
+                if (e.target.classList.contains('task-item')) {
+                    draggedItemId = e.target.dataset.id;
+                    setTimeout(() => e.target.classList.add('dragging'), 0);
+                }
+            });
+            document.addEventListener('dragend', e => {
+                if (e.target.classList.contains('task-item')) {
+                    e.target.classList.remove('dragging');
+                    draggedItemId = null;
+                }
+            });
             allTaskLists.forEach(list => {
-                list.addEventListener('dragover', e => { e.preventDefault(); list.classList.add('drag-over'); const afterElement = getDragAfterElement(list, e.clientY); if (draggedItem) { if (afterElement == null) list.appendChild(draggedItem); else list.insertBefore(draggedItem, afterElement); } });
+                list.addEventListener('dragover', e => { e.preventDefault(); list.classList.add('drag-over'); });
                 list.addEventListener('dragleave', () => list.classList.remove('drag-over'));
                 list.addEventListener('drop', async e => {
                     e.preventDefault();
                     list.classList.remove('drag-over');
+                    if (!draggedItemId) return;
+
+                    const draggedEl = document.querySelector(`[data-id="${draggedItemId}"]`);
+                    const afterElement = getDragAfterElement(list, e.clientY);
+                    
+                    if (afterElement) list.insertBefore(draggedEl, afterElement);
+                    else list.appendChild(draggedEl);
+
                     const newOrderIds = Array.from(list.children).map(item => item.dataset.id);
                     const batch = db.batch();
                     newOrderIds.forEach((id, index) => {
                         const taskDocRef = taskCollection.doc(String(id));
-                        const task = tasks.find(t => t.id === id) || {status: 'planned'};
-                        const updates = { location: list.id, order: index };
-                        if (list.id !== 'plan-list' && task.status === 'planned') {
-                            updates.status = 'ready'; updates.originalLocation = list.id;
-                        } else if (list.id.startsWith('box-')) {
-                            updates.originalLocation = list.id;
+                        const task = tasks.find(t => t.id === id);
+                        if(task){
+                            const updates = { location: list.id, order: index };
+                            if (list.id.startsWith('box-')) {
+                                updates.originalLocation = list.id;
+                                if(task.status === 'planned') updates.status = 'ready';
+                            }
+                            batch.update(taskDocRef, updates);
                         }
-                        batch.update(taskDocRef, updates);
                     });
                     await batch.commit();
                 });
             });
         }
-        function getDragAfterElement(container, y) { const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')]; return draggableElements.reduce((closest, child) => { const box = child.getBoundingClientRect(); const offset = y - box.top - box.height / 2; if (offset < 0 && offset > closest.offset) return { offset, element: child }; return closest; }, { offset: Number.NEGATIVE_INFINITY }).element; }
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) return { offset, element: child };
+                return closest;
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
         
         function exportCsv(type) {
             const date = mainDatePicker.value;
@@ -416,14 +443,14 @@
                 header = ['日付', 'タスク名', '予定時間(分)'];
                 filename = `計画_${date}.csv`;
                 const rows = data.map(t => [t.plannedDate, `"${t.text.replace(/"/g, '""')}"`, t.plannedDuration]);
-                triggerDownload( "data:text/csv;charset=utf-8,\uFEFF" + [header.join(','), ...rows.map(e => e.join(','))].join('\n'), filename);
+                triggerDownload("data:text/csv;charset=utf-8,\uFEFF" + [header.join(','), ...rows.map(e => e.join(','))].join('\n'), filename);
             } else {
                 data = tasks.filter(t => t.location === '実績-list');
                 if (data.length === 0) return alert('出力する実績がありません。');
-                header = ['実施日', '優先度', 'タスク名', '作業時間(分)', '休憩時間(分)']; // 休憩時間は未実装
+                header = ['実施日', '優先度', 'タスク名', '作業時間(分)', '休憩時間(分)'];
                 filename = `実績_${date}.csv`;
                  const rows = data.map(t => {
-                    const priority = priorityMap[t.originalLocation || ''] || (t.isUrgent ? 'A:緊急&重要' : 'N/A');
+                    const priority = priorityMap[t.originalLocation] || (t.isUrgent ? 'A:緊急&重要' : 'N/A');
                     return [t.actualDate, priority, `"${t.text.replace(/"/g, '""')}"`, Math.ceil((t.workTime || 0)/60), Math.ceil((t.breakTime || 0)/60)];
                 });
                 triggerDownload("data:text/csv;charset=utf-8,\uFEFF" + [header.join(','), ...rows.map(e => e.join(','))].join('\n'), filename);
@@ -451,6 +478,7 @@
         });
         
         mainDatePicker.value = new Date().toISOString().split('T')[0];
+        setupDragAndDrop();
         if (auth.currentUser) {
             loadAllDataForDate(mainDatePicker.value);
         } else {
