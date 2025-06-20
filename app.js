@@ -13,6 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const saveDailyBtn = document.getElementById('save-daily-btn');
     const saveConfirmMsg = document.getElementById('save-confirm-msg');
     const 実績List = document.getElementById('実績-list');
+    // CSV出力ボタン
+    const exportPlanBtn = document.getElementById('export-plan-btn');
+    const export実績Btn = document.getElementById('export-実績-btn');
+    
     // 実行パネル
     const currentTaskDisplay = document.getElementById('current-task-display');
     const timerClock = document.getElementById('timer-clock');
@@ -74,18 +78,20 @@ document.addEventListener('DOMContentLoaded', () => {
         saveConfirmMsg.classList.add('show');
         setTimeout(() => saveConfirmMsg.classList.remove('show'), 2000);
     });
+    
+    // ★★★ CSV出力ボタンのイベントリスナーを追加 ★★★
+    exportPlanBtn.addEventListener('click', exportPlanToCsv);
+    export実績Btn.addEventListener('click', export実績ToCsv);
 
     startBtn.addEventListener('click', startTimer);
     pauseBtn.addEventListener('click', pauseTimer);
     completeBtn.addEventListener('click', () => completeTask('完了'));
     cancelBtn.addEventListener('click', () => completeTask('中止'));
 
-    // モーダルボタンのイベント
     modalCompleteBtn.addEventListener('click', () => completeTask('完了'));
     modalExtendBtn.addEventListener('click', extendTimer);
     modalCancelBtn.addEventListener('click', () => completeTask('中止'));
 
-    // ドラッグ＆ドロップ
     dropZones.forEach(zone => {
         zone.addEventListener('dragover', e => e.preventDefault());
         zone.addEventListener('dragenter', e => { if (e.target.closest('.drop-zone')) e.target.closest('.drop-zone').classList.add('drag-over'); });
@@ -97,7 +103,6 @@ document.addEventListener('DOMContentLoaded', () => {
     // ===== 関数定義 =====
     // =======================================================
     
-    /** タスク要素の生成 */
     function createTaskElement(name, duration, listElement, priority) {
         const li = document.createElement('li');
         li.className = 'task-item';
@@ -113,16 +118,14 @@ document.addEventListener('DOMContentLoaded', () => {
         li.addEventListener('dragend', e => e.target.classList.remove('dragging'));
         listElement.appendChild(li);
     }
-
-    /** タスクの個別削除 */
+    
     function deleteTask(taskElement) {
         if (confirm(`タスク「${taskElement.dataset.name}」を削除しますか？`)) {
             if (taskElement === currentSelectedTask) resetExecutionPanel();
             taskElement.remove();
         }
     }
-
-    /** タスクを実行対象として選択 */
+    
     function selectTask(taskElement) {
         if (timerInterval) { alert('他のタスクを実行中です。'); return; }
         if (currentSelectedTask) currentSelectedTask.classList.remove('selected');
@@ -136,23 +139,20 @@ document.addEventListener('DOMContentLoaded', () => {
         updateExecutionButtons(true, false);
     }
     
-    /** タイマー開始 */
     function startTimer() {
         if (!currentSelectedTask) return;
         startTime = Date.now();
         timerInterval = setInterval(updateTimer, 1000);
         updateExecutionButtons(false, true);
     }
-
-    /** タイマー一時停止 */
+    
     function pauseTimer() {
         clearInterval(timerInterval);
         timerInterval = null;
-        pauseTime = timerSeconds; // 経過時間を保存
+        pauseTime = timerSeconds;
         updateExecutionButtons(true, false);
     }
     
-    /** タイマー表示更新 (高精度) */
     function updateTimer() {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         timerSeconds = pauseTime + elapsed;
@@ -162,13 +162,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const s = (timerSeconds % 60).toString().padStart(2, '0');
         timerClock.textContent = `${h}:${m}:${s}`;
         
-        // 時間切れの判定
-        if (timerSeconds >= plannedSeconds && !timesUpModal.style.display.includes('flex')) {
+        if (plannedSeconds > 0 && timerSeconds >= plannedSeconds && !timesUpModal.style.display.includes('flex')) {
             handleTimesUp();
         }
     }
-
-    /** 時間切れ処理 */
+    
     function handleTimesUp() {
         pauseTimer();
         notificationSound.play();
@@ -177,8 +175,7 @@ document.addEventListener('DOMContentLoaded', () => {
         modalTaskName.textContent = `タスク「${currentSelectedTask.dataset.name}」の予定時間です。どうしますか？`;
         timesUpModal.style.display = 'flex';
     }
-
-    /** タイマー延長 */
+    
     function extendTimer() {
         const extraMinutes = parseInt(prompt("何分延長しますか？", "10"), 10);
         if (!isNaN(extraMinutes) && extraMinutes > 0) {
@@ -189,7 +186,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    /** タスク完了/中止処理 */
     function completeTask(status) {
         if (!currentSelectedTask) return;
         
@@ -215,10 +211,16 @@ document.addEventListener('DOMContentLoaded', () => {
         resetExecutionPanel();
     }
     
-    /** 実績リストへの追加 */
     function addResultToList(data, actualMinutes, diff, status) {
         const li = document.createElement('li');
         li.className = 'result-item';
+        // CSV出力用に実績データをdata属性に保存
+        li.dataset.priority = data.priority;
+        li.dataset.name = data.name;
+        li.dataset.status = status.text;
+        li.dataset.planned = data.duration;
+        li.dataset.actual = actualMinutes;
+        li.dataset.diff = diff;
         
         const priorityMap = { '緊急＆重要': '#f5222d', '重要＆非緊急': '#1890ff', '緊急＆非重要': '#faad14', '非緊急 & 非重要': '#bfbfbf', '計画': '#595959' };
         const priorityColor = priorityMap[data.priority] || '#595959';
@@ -228,12 +230,70 @@ document.addEventListener('DOMContentLoaded', () => {
             <span class="result-name">${data.name}</span>
             <span class="result-status ${status.class}">${status.text}</span>
             <span class="result-times">計画: ${data.duration}分 / 実績: ${actualMinutes}分</span>
-            <span class="result-diff">時間差: ${diff > 0 ? '+' : ''}${diff}分</span>
+            <span class="result-diff">時間差: ${diff >= 0 ? '+' : ''}${diff}分</span>
         `;
         実績List.appendChild(li);
     }
     
-    /** 実行パネルのリセット */
+    // ★★★ 計画CSV出力の関数 ★★★
+    function exportPlanToCsv() {
+        const tasks = document.querySelectorAll('#plan-list .task-item, .priority-grid .task-item');
+        if (tasks.length === 0) {
+            alert('出力する計画タスクがありません。');
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM付きUTF-8
+        csvContent += "優先度,タスク名,予定時間(分)\r\n";
+
+        tasks.forEach(task => {
+            const priority = task.dataset.priority;
+            const name = task.dataset.name.replace(/"/g, '""'); // ダブルクォートのエスケープ
+            const duration = task.dataset.duration;
+            csvContent += `"${priority}","${name}","${duration}"\r\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        const fileName = `計画_${new Date().toISOString().split('T')[0]}.csv`;
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+
+    // ★★★ 実績CSV出力の関数 ★★★
+    function export実績ToCsv() {
+        const results = document.querySelectorAll('#実績-list .result-item');
+        if (results.length === 0) {
+            alert('出力する実績がありません。');
+            return;
+        }
+
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF"; // BOM付きUTF-8
+        csvContent += "優先度,タスク名,ステータス,計画時間(分),実績時間(分),時間差(分)\r\n";
+
+        results.forEach(result => {
+            const priority = result.dataset.priority;
+            const name = result.dataset.name.replace(/"/g, '""');
+            const status = result.dataset.status;
+            const planned = result.dataset.planned;
+            const actual = result.dataset.actual;
+            const diff = result.dataset.diff;
+            csvContent += `"${priority}","${name}","${status}","${planned}","${actual}","${diff}"\r\n`;
+        });
+
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        const fileName = `実績_${new Date().toISOString().split('T')[0]}.csv`;
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    
     function resetExecutionPanel() {
         if (currentSelectedTask) currentSelectedTask.classList.remove('selected');
         currentSelectedTask = null;
@@ -243,7 +303,6 @@ document.addEventListener('DOMContentLoaded', () => {
         hideModal();
     }
 
-    /** タイマーのリセット */
     function resetTimer() {
         clearInterval(timerInterval);
         timerInterval = null;
@@ -252,7 +311,6 @@ document.addEventListener('DOMContentLoaded', () => {
         timerClock.textContent = '00:00:00';
     }
 
-    /** 実行ボタンの有効/無効化 */
     function updateExecutionButtons(canStart, canPause) {
         startBtn.disabled = !canStart;
         pauseBtn.disabled = !canPause;
@@ -260,14 +318,12 @@ document.addEventListener('DOMContentLoaded', () => {
         cancelBtn.disabled = !(canStart || canPause);
     }
     
-    /** モーダルを隠す */
     function hideModal() {
         timesUpModal.style.display = 'none';
         timerClock.classList.remove('timer-flash');
         document.title = originalTitle;
     }
-
-    /** ドラッグ＆ドロップ処理 */
+    
     function handleDrop(e) {
         e.preventDefault();
         const dropZone = e.target.closest('.drop-zone');
@@ -275,19 +331,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const draggedItem = document.getElementById(draggedId) || document.querySelector('.dragging');
 
         if (dropZone && draggedItem) {
-            const priorityBox = dropZone.closest('.priority-box');
+            const priorityBox = draggedItem.closest('.priority-box');
             if (priorityBox) {
-                draggedItem.dataset.priority = priorityBox.querySelector('h3').textContent;
-            } else {
+                // ドロップ先の優先度を取得
+                const newPriority = dropZone.querySelector('h3').textContent.trim();
+                draggedItem.dataset.priority = newPriority;
+            } else if (dropZone.id === 'plan-list') {
                 draggedItem.dataset.priority = '計画';
             }
+            
             const targetList = dropZone.querySelector('.task-list') || dropZone;
             targetList.appendChild(draggedItem);
             dropZone.classList.remove('drag-over');
         }
     }
     
-    /** 入力バリデーション */
     function validateInput(input) {
         input.classList.remove('input-error');
         if (input.value.trim() === '') {
@@ -298,5 +356,5 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     }
 
-    console.log('業務管理アプリが初期化されました。Ver.5.0');
+    console.log('業務管理アプリが初期化されました。Ver.5.1 (CSV Export Fixed)');
 });
