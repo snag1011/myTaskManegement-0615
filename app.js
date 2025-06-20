@@ -9,20 +9,29 @@ document.addEventListener('DOMContentLoaded', () => {
     // あなた自身のFirebaseプロジェクトの設定情報に【置き換え】てください。
     // Firebaseコンソールの「プロジェクトの設定」>「マイアプリ」から取得できます。
 
-    // Import the functions you need from the SDKs you need
+// Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
 // Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
-  apiKey: "AIzaSyAdMv_zeq5WdA3l2JsEPe3uQLFG_4Jp4To",
-  authDomain: "my-task-manegment.firebaseapp.com",
-  projectId: "my-task-manegment",
-  storageBucket: "my-task-manegment.firebasestorage.app",
-  messagingSenderId: "1081004250364",
-  appId: "1:1081004250364:web:fe78d16366ddbe953f3379"
+  apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
+  authDomain: "my-private-task-manegment.firebaseapp.com",
+  projectId: "my-private-task-manegment",
+  storageBucket: "my-private-task-manegment.firebasestorage.app",
+  messagingSenderId: "272952129117",
+  appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4",
+  measurementId: "G-NRTVNKPLF6"
 };
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+
+
 
     // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
 
