@@ -1,201 +1,142 @@
-document.addEventListener('DOMContentLoaded', () => {
-    // ===== 要素の取得 =====
-    const planTaskInput = document.getElementById('plan-task-input');
-    const planDurationInput = document.getElementById('plan-duration-input');
-    const addPlanForm = document.getElementById('add-plan-form');
-    const planList = document.getElementById('plan-list');
-    const urgentTaskInput = document.getElementById('urgent-task-input');
-    const urgentDurationInput = document.getElementById('urgent-duration-input');
-    const addUrgentForm = document.getElementById('add-urgent-form');
-    const boxAList = document.getElementById('box-a-list');
-    const deleteDayDataBtn = document.getElementById('delete-day-data-btn');
-    const dropZones = document.querySelectorAll('.drop-zone');
-    const saveDailyBtn = document.getElementById('save-daily-btn');
-    const saveConfirmMsg = document.getElementById('save-confirm-msg');
-    const 実績List = document.getElementById('実績-list');
-    // CSV出力ボタン
-    const exportPlanBtn = document.getElementById('export-plan-btn');
-    const export実績Btn = document.getElementById('export-実績-btn');
-    
-    // 実行パネル
-    const currentTaskDisplay = document.getElementById('current-task-display');
-    const timerClock = document.getElementById('timer-clock');
-    const startBtn = document.getElementById('start-btn');
-    const pauseBtn = document.getElementById('pause-btn');
-    const completeBtn = document.getElementById('complete-btn');
-    const cancelBtn = document.getElementById('cancel-btn');
-    // 通知関連
-    const notificationSound = document.getElementById('notification-sound');
-    const timesUpModal = document.getElementById('times-up-modal');
-    const modalTaskName = document.getElementById('modal-task-name');
-    const modalCompleteBtn = document.getElementById('modal-complete-btn');
-    const modalExtendBtn = document.getElementById('modal-extend-btn');
-    const modalCancelBtn = document.getElementById('modal-cancel-btn');
+/* ===== グローバルスタイルと変数定義 ===== */
+:root {
+  --primary-color: #4a90e2;
+  --primary-hover-color: #357abd;
+  --success-color: #5cb85c;
+  --success-hover-color: #4cae4c;
+  --danger-color: #d9534f;
+  --danger-hover-color: #c9302c;
+  --bg-color: #f0f2f5;
+  --panel-bg-color: #ffffff;
+  --text-color: #333;
+  --border-color: #e0e0e0;
+  --shadow-color: rgba(0, 0, 0, 0.08);
+  --selected-bg-color: #e8f0fe;
+  
+  /* パネルの色分け */
+  --focus-panel-bg: #fffbe6;   /* 薄い黄色 */
+  --plan-panel-bg: #e6f7ff;    /*薄い青*/
+  --result-panel-bg: #f6ffed;  /*薄い緑*/
+  --exec-panel-bg: #f9f0ff;    /*薄い紫*/
+  
+  /* 優先度ボックスの色分け */
+  --box-a-bg: #fff1f0; /* 薄い赤 */
+  --box-b-bg: #e6f7ff; /* 薄い青 */
+  --box-c-bg: #fffbe6; /* 薄い黄 */
+  --box-d-bg: #f6f6f6; /* 薄いグレー */
+  
+  --font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
+}
 
-    // ===== アプリの状態を管理する変数 =====
-    let currentSelectedTask = null;
-    let timerInterval = null;
-    let timerSeconds = 0;
-    let plannedSeconds = 0; // 計画時間(秒)
-    let startTime = 0;      // タイマー開始時刻(ミリ秒)
-    let pauseTime = 0;      // 一時停止した時点での経過時間
-    let wasExtended = false;
-    let originalTitle = document.title;
-    
-    // =======================================================
-    // ===== イベントリスナー =====
-    // =======================================================
+body {
+  font-family: var(--font-family);
+  background-color: var(--bg-color);
+  color: var(--text-color);
+  margin: 0;
+  line-height: 1.6;
+}
 
-    addPlanForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (validateInput(planTaskInput)) {
-            createTaskElement(planTaskInput.value.trim(), planDurationInput.value, planList, '計画');
-            planTaskInput.value = '';
-            planTaskInput.focus();
-        }
-    });
+.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
+h1, h2, h3 { color: var(--text-color); margin-top: 0; }
+ul { list-style: none; padding: 0; margin: 0; }
 
-    addUrgentForm.addEventListener('submit', (e) => {
-        e.preventDefault();
-        if (validateInput(urgentTaskInput)) {
-            createTaskElement(urgentTaskInput.value.trim(), urgentDurationInput.value, boxAList, '緊急＆重要');
-            urgentTaskInput.value = '';
-        }
-    });
+/* ===== ヘッダー ===== */
+.top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background-color: var(--panel-bg-color); border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
 
-    deleteDayDataBtn.addEventListener('click', () => {
-        if (confirm('この日のすべてのデータをリセットしますか？')) {
-            document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
-            document.getElementById('daily-goal').value = '';
-            document.getElementById('daily-journal').valuespan id="notification-status"></span>
-        <button id="request-notification-btn" style="display: none;">デスクトップ通知を許可</button>
-      </div>
-      <div class="auth-bar">
-        <span id="user-info"></span>
-        <button id="login-btn">Googleアカウントでログイン</button>
-        <button id="logout-btn" style="display: none;">ログアウト</button>
-      </div>
-    </header>
+/* ===== メインレイアウトとパネルの色分け ===== */
+.main-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+.panel { background-color: var(--panel-bg-color); border-radius: 8px; padding: 20px; box-shadow: 0 4px 12px var(--shadow-color); margin-bottom: 20px; }
+#focus-panel { background-color: var(--focus-panel-bg); }
+#plan-panel { background-color: var(--plan-panel-bg); }
+#result-panel { background-color: var(--result-panel-bg); }
+#execution-panel { background-color: var(--exec-panel-bg); }
+.panel h2 { margin-bottom: 15px; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
 
-    <!-- ===== メインコンテンツ ===== -->
-    <main id="main-content" class="main-content">
-      <h1>🚀【Pro版 Ver.5.2】業務管理アプリ</h1>
-      <div class="date-selector-panel">
-        <input type="date" id="main-date-picker" />
-      </div>
+/* ===== フォーム要素 ===== */
+input[type="text"], input[type="number"], textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 10px; box-sizing: border-box; transition: border-color 0.3s, box-shadow 0.3s; }
+input[type="text"]:focus, input[type="number"]:focus, textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 5px rgba(74, 144, 226, 0.5); }
+.input-form { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
+.input-form input[type="text"] { flex-grow: 1; margin-bottom: 0; }
+.input-form input[type="number"] { width: 70px; margin-bottom: 0; }
+.duration-input-wrapper { display: flex; align-items: center; gap: 5px; }
+.input-error { border-color: var(--danger-color) !important; box-shadow: 0 0 5px rgba(217, 83, 79, 0.5) !important; }
 
-      <div class="main-grid">
-        <!-- ===== 左カラム: 計画と実績 ===== -->
-        <div class="planning-column">
-          <!-- 本日のフォーカス -->
-          <section id="focus-panel" class="panel">
-            <h2>本日のフォーカス</h2>
-            <label for="daily-goal"><strong>本日の目標</strong></label>
-            <input type="text" id="daily-goal" class="daily-input" placeholder="今日達成したい最も重要なこと" />
-            <label for="daily-journal"><strong>本日のジャーナル</strong></label>
-            <textarea id="daily-journal" class="daily-input" rows="4" placeholder="一日の終わりに振り返りを記録しよう"></textarea>
-            <button id="save-daily-btn">目標とジャーナルを保存</button>
-            <span id="save-confirm-msg" class="save-confirm-msg"></span>
-          </section>
+/* ===== ボタン ===== */
+button { padding: 10px 15px; border: none; border-radius: 4px; background-color: var(--primary-color); color: white; font-weight: bold; cursor: pointer; transition: background-color 0.3s, transform 0.1s; }
+button:hover { background-color: var(--primary-hover-color); }
+button:active { transform: translateY(1px); }
+button:disabled { background-color: #ccc; cursor: not-allowed; }
+.button-danger { background-color: var(--danger-color); }
+.button-danger:hover { background-color: var(--danger-hover-color); }
+.button-success { background-color: var(--success-color); }
+.button-success:hover { background-color: var(--success-hover-color); }
+.export-button { background-color: #6c757d; }
+.export-button:hover { background-color: #5a6268; }
+.panel-actions { display: flex; gap: 10px; margin-top: 15px; }
 
-          <!-- 計画タスク -->
-          <section id="plan-panel" class="panel">
-            <h2>計画タスク</h2>
-            <form id="add-plan-form" class="input-form">
-              <input type="text" id="plan-task-input" placeholder="タスク名" />
-              <div class="duration-input-wrapper">
-                <!-- ★ 変更点: デフォルト値と単位を秒に変更 -->
-                <input type="number" id="plan-duration-input" value="1800" min="1" title="予定時間(秒)" />
-                <span>秒</span>
-              </div>
-              <button id="add-plan-btn" type="submit">追加</button>
-            </form>
-            <ul id="plan-list" class="task-list drop-zone"></ul>
-            <div class="panel-actions">
-              <button id="export-plan-btn" class="export-button">📋 計画をCSV出力</button>
-              <button id="delete-day-data-btn" class="export-button button-danger">🗑️ この日の全データをリセット</button>
-            </div>
-          </section>
+/* ===== 保存確認メッセージ ===== */
+.save-confirm-msg { color: var(--success-color); font-weight: bold; margin-left: 10px; opacity: 0; transition: opacity 0.5s; }
+.save-confirm-msg.show { opacity: 1; }
 
-          <!-- 実績 -->
-          <section id="result-panel" class="panel">
-            <h2>実績</h2>
-            <ul id="実績-list" class="task-list"></ul>
-            <div class="panel-actions">
-              <button id="export-実績-btn" class="export-button">📈 実績をCSV出力</button>
-            </div>
-          </section>
-        </div>
+/* ===== タスクリスト ===== */
+.task-list { min-height: 50px; border-radius: 4px; padding: 5px; transition: background-color 0.3s; }
+.task-item { display: flex; align-items: center; padding: 12px; background-color: #fff; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 8px; cursor: pointer; transition: background-color 0.3s, box-shadow 0.3s; }
+.task-item:hover { background-color: #f8f9fa; box-shadow: 0 2px 5px var(--shadow-color); }
+.task-item.selected { background-color: var(--selected-bg-color); border-color: var(--primary-color); box-shadow: 0 2px 8px rgba(74, 144, 226, 0.4); }
+.task-item .task-name { flex-grow: 1; font-weight: 500; }
+.task-item .task-duration { font-size: 0.9em; color: #666; background-color: #e9ecef; padding: 2px 8px; border-radius: 10px; margin-right: 10px; }
+.task-item .delete-btn { background: none; border: none; color: #aaa; font-size: 1.2em; font-weight: bold; padding: 0 5px; cursor: pointer; visibility: hidden; opacity: 0; transition: color 0.3s, opacity 0.3s, visibility 0.3s; }
+.task-item:hover .delete-btn { visibility: visible; opacity: 1; }
+.task-item .delete-btn:hover { color: var(--danger-color); }
 
-        <!-- ===== 右カラム: 実行と分類 ===== -->
-        <div class="execution-column">
-          <section id="execution-panel" class="panel">
-            <h2>実行と分類</h2>
-            <div class="execution-top">
-              <div id="current-task-display"><p>実行するタスクをクリックで選択</p></div>
-              <div id="timer-clock">00:00:00</div>
-            </div>
-            <div class="execution-controls">
-              <button id="start-btn" disabled aria-label="開始/再開">▶️ 開始/再開</button>
-              <button id="pause-btn" disabled aria-label="一時停止">⏸️ 一時停止</button>
-              <button id="complete-btn" disabled aria-label="完了">✅ 完了</button>
-              <button id="cancel-btn" disabled aria-label="中止">⏹️ 中止</button>
-            </div>
-            <hr />
-            <!-- 割り込みタスク -->
-            <div id="urgent-task-panel">
-              <h3>割り込みタスク</h3>
-              <form id="add-urgent-form" class="input-form">
-                <input type="text" id="urgent-task-input" placeholder="緊急タスク名" />
-                <div class="duration-input-wrapper">
-                    <!-- ★ 変更点: デフォルト値と単位を秒に変更 -->
-                    <input type="number" id="urgent-duration-input" value="900" min="1" />
-                    <span>秒</span>
-                </div>
-                <button id="add-urgent-btn" type="submit">最優先に追加</button>
-              </form>
-            </div>
-            <!-- 優先度マトリックス -->
-            <div class="priority-grid">
-                <div id="box-a" class="priority-box drop-zone" aria-labelledby="box-a-heading">
-                    <h3 id="box-a-heading">🔥 緊急＆重要</h3><small>(今すぐ取り組むべき)</small>
-                    <ul id="box-a-list" class="task-list"></ul>
-                </div>
-                <div id="box-b" class="priority-box drop-zone" aria-labelledby="box-b-heading">
-                    <h3 id="box-b-heading">🌱 重要＆非緊急</h3><small>(計画的に取り組むべき)</small>
-                    <ul id="box-b-list" class="task-list"></ul>
-                </div>
-                <div id="box-c" class="priority-box drop-zone" aria-labelledby="box-c-heading">
-                    <h3 id="box-c-heading">⚡️ 緊急＆非重要</h3><small>(移譲・効率化すべき)</small>
-                    <ul id="box-c-list" class="task-list"></ul>
-                </div>
-                <div id="box-d" class="priority-box drop-zone" aria-labelledby="box-d-heading">
-                    <h3 id="box-d-heading">🗑️ 非緊急 & 非重要</h3><small>(やめるべき)</small>
-                    <ul id="box-d-list" class="task-list"></ul>
-                </div>
-            </div>
-          </section>
-        </div>
-      </div>
-    </main>
+/* ===== 実績リストのスタイル ===== */
+.result-item { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 15px; padding: 10px; font-size: 0.9em; }
+.result-priority { font-weight: bold; padding: 3px 8px; border-radius: 4px; color: #fff; }
+.result-name { font-weight: 500; flex-grow: 1; }
+.result-status { font-weight: bold; padding: 3px 8px; border-radius: 4px; }
+.result-times { color: #555; }
+.result-diff { color: #555; }
+/* 実績のステータス色 */
+.status-ontime { background-color: #e6f7ff; color: #1d39c4; }
+.status-shortened { background-color: #f6ffed; color: #389e0d; }
+.status-extended { background-color: #fffbe6; color: #d46b08; }
+.status-canceled { background-color: #fff1f0; color: #cf1322; }
 
-    <!-- ===== 時間切れ通知モーダル ===== -->
-    <div id="times-up-modal" class="modal-overlay" style="display: none;">
-      <div class="modal-content">
-        <h2>⏰ 時間です！</h2>
-        <p id="modal-task-name">タスクの予定時間になりました。どうしますか？</p>
-        <div class="modal-actions">
-          <button id="modal-complete-btn" class="button-success">✅ 完了する</button>
-          <button id="modal-extend-btn">🕰️ 延長する</button>
-          <button id="modal-cancel-btn" class="button-danger">⏹️ 中止する</button>
-        </div>
-      </div>
-    </div>
-    
-    <!-- ===== 通知音再生用 ===== -->
-    <audio id="notification-sound" src="notification.mp3" preload="auto"></audio>
-  </div>
+/* ドラッグ&ドロップ */
+.task-item.dragging { opacity: 0.5; background: #cce5ff; }
+.drop-zone.drag-over { background-color: #e8f0fe; border: 2px dashed var(--primary-color); }
 
-  <script src="app.js"></script>
-</body>
-</html>
+/* ===== 実行パネルとタイマー ===== */
+#current-task-display { background-color: #e9ecef; padding: 10px; border-radius: 4px; min-height: 40px; display: flex; align-items: center; }
+#current-task-display p { margin: 0; color: #6c757d; }
+#timer-clock { font-size: 3.5rem; font-weight: bold; color: var(--primary-color); text-align: center; margin: 10px 0; letter-spacing: 2px; }
+.timer-flash { animation: flash 1s infinite; }
+@keyframes flash { 0%, 100% { background-color: var(--exec-panel-bg); } 50% { background-color: #ffdada; } }
+
+/* ===== 優先度マトリックスの色分け ===== */
+.priority-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
+.priority-box { padding: 15px; border: 1px solid var(--border-color); border-radius: 6px; }
+#box-a { background-color: var(--box-a-bg); }
+#box-b { background-color: var(--box-b-bg); }
+#box-c { background-color: var(--box-c-bg); }
+#box-d { background-color: var(--box-d-bg); }
+.priority-box h3 { font-size: 1.1em; padding-bottom: 8px; border-color: #ccc; text-align: center; }
+.priority-box small { display: block; text-align: center; margin-top: -15px; margin-bottom: 10px; font-size: 0.8em; color: #666; }
+
+/* ===== 時間切れ通知モーダル ===== */
+.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
+.modal-content { background-color: white; padding: 30px; border-radius: 8px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
+.modal-content h2 { margin-bottom: 15px; }
+.modal-content p { margin-bottom: 25px; font-size: 1.1em; }
+.modal-actions { display: flex; justify-content: center; gap: 15px; }
+
+/* ===== レスポンシブ対応 ===== */
+@media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
+@media (max-width: 768px) {
+  .top-bar { flex-direction: column; gap: 10px; }
+  .input-form { flex-direction: column; align-items: stretch; }
+  .input-form input[type="number"] { width: 100%; }
+  .priority-grid { grid-template-columns: 1fr; }
+  #timer-clock { font-size: 2.5rem; }
+  .modal-actions { flex-direction: column; }
+}
