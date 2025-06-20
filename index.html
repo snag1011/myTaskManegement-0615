@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>【最終完成版 Ver.2.1】インテリジェント業務管理アプリ</title>
+    <title>【最終完成版 Ver.2.2】インテリジェント業務管理アプリ</title>
     <!-- Firebase SDKの読み込み -->
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
@@ -41,7 +41,7 @@
         .delete-plan-btn { background: none; border: none; color: #c0392b; cursor: pointer; font-size: 1.5em; font-weight: bold; opacity: 0; transition: opacity 0.2s; padding: 0 8px; line-height: 1; }
         .task-item:hover .delete-plan-btn { opacity: 0.6; }
         .delete-plan-btn:hover { opacity: 1; }
-        .execution-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        .execution-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; transition: background-color 0.5s; }
         #timer-clock { font-size: 2.5em; font-weight: bold; letter-spacing: 2px; }
         #current-task-display { text-align: left; } #current-task-display p { margin: 0; font-size: 1.1em; }
         .priority-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
@@ -60,6 +60,8 @@
         .export-button, #delete-day-data-btn { width: 100%; padding: 12px; margin-top: 15px; font-size: 1em; border: none; border-radius: 8px; cursor: pointer; color: white; }
         #export-plan-btn { background-color: #2980b9; } #export-実績-btn { background-color: #8e44ad; }
         #delete-day-data-btn { background-color: #e74c3c; margin-top: 5px; }
+        .timer-flashing { animation: flash-bg 1s infinite; } /* ★通知用CSS */
+        @keyframes flash-bg { 50% { background-color: #e74c3c; } }
         @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -71,7 +73,7 @@
             <button id="logout-btn" style="display: none;">ログアウト</button>
         </div>
         <div id="main-content" class="main-content">
-             <h1>🚀【最終完成版 Ver.2.1】業務管理アプリ</h1>
+             <h1>🚀【最終完成版 Ver.2.2】業務管理アプリ</h1>
              <div class="date-selector-panel">
                 <input type="date" id="main-date-picker">
             </div>
@@ -152,10 +154,11 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         let tasks = [];
-        let taskCollection;
-        let dailyDataCollection;
+        let taskCollection, dailyDataCollection;
         let unsubscribeTasks, unsubscribeDaily;
         let timerInterval = null;
+        let notificationInterval = null; // ★通知用のインターバルID
+        const originalTitle = document.title;
         
         const mainDatePicker = document.getElementById('main-date-picker');
         const loginBtn = document.getElementById('login-btn');
@@ -172,6 +175,7 @@
         const urgentTaskInput = document.getElementById('urgent-task-input');
         const urgentDurationInput = document.getElementById('urgent-duration-input');
         const addUrgentBtn = document.getElementById('add-urgent-btn');
+        const executionTop = document.querySelector('.execution-top');
         const currentTaskDisplay = document.getElementById('current-task-display');
         const timerClock = document.getElementById('timer-clock');
         const startBtn = document.getElementById('start-btn');
@@ -186,16 +190,14 @@
         auth.onAuthStateChanged(user => {
             if (user) {
                 userInfo.textContent = `${user.displayName} さん`;
-                loginBtn.style.display = 'none';
-                logoutBtn.style.display = 'block';
+                loginBtn.style.display = 'none'; logoutBtn.style.display = 'block';
                 mainContent.style.display = 'block';
                 taskCollection = db.collection('users').doc(user.uid).collection('tasks');
                 dailyDataCollection = db.collection('users').doc(user.uid).collection('daily_data');
                 loadAllDataForDate(mainDatePicker.value);
             } else {
                 userInfo.textContent = '';
-                loginBtn.style.display = 'block';
-                logoutBtn.style.display = 'none';
+                loginBtn.style.display = 'block'; logoutBtn.style.display = 'none';
                 mainContent.style.display = 'none';
                 if (unsubscribeTasks) unsubscribeTasks();
                 if (unsubscribeDaily) unsubscribeDaily();
@@ -296,7 +298,7 @@
                 const deleteBtn = document.createElement('button');
                 deleteBtn.className = 'delete-plan-btn';
                 deleteBtn.title = '計画から削除';
-                deleteBtn.innerHTML = '&times;';
+                deleteBtn.innerHTML = '×';
                 item.appendChild(deleteBtn);
             }
             return item;
@@ -317,12 +319,14 @@
             if (!currentTask) {
                 currentTaskDisplay.innerHTML = `<p>実行タスクがありません</p>`;
                 timerClock.textContent = '00:00';
+                document.title = originalTitle;
                 updateControlButtons('initial');
                 return;
             }
             const remainingTime = (currentTask.plannedDuration * 60) - (currentTask.workTime || 0);
             currentTaskDisplay.innerHTML = `<p>${currentTask.text}</p><small>予定: ${currentTask.plannedDuration}分</small>`;
             timerClock.textContent = formatTime(remainingTime < 0 ? 0 : remainingTime);
+            if(currentTask.status === 'working') document.title = `${timerClock.textContent} - ${currentTask.text}`;
             updateControlButtons(currentTask.status);
         }
         function formatTime(seconds) { return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`; }
@@ -349,12 +353,32 @@
                 const remainingTime = (currentTask.plannedDuration * 60) - workTime;
                 
                 timerClock.textContent = formatTime(remainingTime < 0 ? 0 : remainingTime);
+                document.title = `${timerClock.textContent} - ${currentTask.text}`;
+
                 if (remainingTime < 0) {
-                    pauseTimer();
-                    alarmSound.play();
-                    alert(`「${currentTask.text}」の予定時間が終了しました！`);
+                    handleTimerCompletion(currentTask);
                 }
             }, 1000);
+        }
+
+        async function handleTimerCompletion(task) {
+            clearInterval(timerInterval);
+            alarmSound.play();
+            
+            executionTop.classList.add('timer-flashing');
+            let titleToggle = true;
+            notificationInterval = setInterval(() => {
+                document.title = titleToggle ? `⏰【時間です】` : `${task.text}`;
+                titleToggle = !titleToggle;
+            }, 1000);
+
+            alert(`「${task.text}」の予定時間が終了しました！`);
+            
+            clearInterval(notificationInterval);
+            executionTop.classList.remove('timer-flashing');
+            document.title = originalTitle;
+            
+            await updateTask(task.id, { status: 'paused', workTime: task.plannedDuration * 60 });
         }
 
         async function pauseTimer() {
@@ -371,7 +395,6 @@
             const task = findNextTask();
             if (!task) return;
             if (task.status === 'working') await pauseTimer();
-            const finalTaskState = tasks.find(t => t.id === task.id);
             await updateTask(task.id, { status, location: '実績-list' });
         }
 
@@ -379,32 +402,16 @@
         
         function setupDragAndDrop() {
             let draggedItemId = null;
-            document.addEventListener('dragstart', e => {
-                if (e.target.classList.contains('task-item')) {
-                    draggedItemId = e.target.dataset.id;
-                    setTimeout(() => e.target.classList.add('dragging'), 0);
-                }
-            });
-            document.addEventListener('dragend', e => {
-                if (e.target.classList.contains('task-item')) {
-                    e.target.classList.remove('dragging');
-                    draggedItemId = null;
-                }
-            });
+            document.addEventListener('dragstart', e => { if (e.target.classList.contains('task-item')) { draggedItemId = e.target.dataset.id; setTimeout(() => e.target.classList.add('dragging'), 0); } });
+            document.addEventListener('dragend', e => { if (e.target.classList.contains('task-item')) { e.target.classList.remove('dragging'); draggedItemId = null; } });
             allTaskLists.forEach(list => {
                 list.addEventListener('dragover', e => { e.preventDefault(); list.classList.add('drag-over'); });
                 list.addEventListener('dragleave', () => list.classList.remove('drag-over'));
                 list.addEventListener('drop', async e => {
-                    e.preventDefault();
-                    list.classList.remove('drag-over');
-                    if (!draggedItemId) return;
-
+                    e.preventDefault(); list.classList.remove('drag-over'); if (!draggedItemId) return;
                     const draggedEl = document.querySelector(`[data-id="${draggedItemId}"]`);
                     const afterElement = getDragAfterElement(list, e.clientY);
-                    
-                    if (afterElement) list.insertBefore(draggedEl, afterElement);
-                    else list.appendChild(draggedEl);
-
+                    if (afterElement) list.insertBefore(draggedEl, afterElement); else list.appendChild(draggedEl);
                     const newOrderIds = Array.from(list.children).map(item => item.dataset.id);
                     const batch = db.batch();
                     newOrderIds.forEach((id, index) => {
