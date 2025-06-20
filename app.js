@@ -1,291 +1,302 @@
 document.addEventListener('DOMContentLoaded', () => {
-  // ===== 要素の取得 =====
-  const planTaskInput = document.getElementById('plan-task-input');
-  const planDurationInput = document.getElementById('plan-duration-input');
-  const addPlanForm = document.getElementById('add-plan-form');
-  const planList = document.getElementById('plan-list');
+    // ===== 要素の取得 =====
+    const planTaskInput = document.getElementById('plan-task-input');
+    const planDurationInput = document.getElementById('plan-duration-input');
+    const addPlanForm = document.getElementById('add-plan-form');
+    const planList = document.getElementById('plan-list');
+    const urgentTaskInput = document.getElementById('urgent-task-input');
+    const urgentDurationInput = document.getElementById('urgent-duration-input');
+    const addUrgentForm = document.getElementById('add-urgent-form');
+    const boxAList = document.getElementById('box-a-list');
+    const deleteDayDataBtn = document.getElementById('delete-day-data-btn');
+    const dropZones = document.querySelectorAll('.drop-zone');
+    const saveDailyBtn = document.getElementById('save-daily-btn');
+    const saveConfirmMsg = document.getElementById('save-confirm-msg');
+    const 実績List = document.getElementById('実績-list');
+    // 実行パネル
+    const currentTaskDisplay = document.getElementById('current-task-display');
+    const timerClock = document.getElementById('timer-clock');
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const completeBtn = document.getElementById('complete-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
+    // 通知関連
+    const notificationSound = document.getElementById('notification-sound');
+    const timesUpModal = document.getElementById('times-up-modal');
+    const modalTaskName = document.getElementById('modal-task-name');
+    const modalCompleteBtn = document.getElementById('modal-complete-btn');
+    const modalExtendBtn = document.getElementById('modal-extend-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
 
-  const urgentTaskInput = document.getElementById('urgent-task-input');
-  const urgentDurationInput = document.getElementById('urgent-duration-input');
-  const addUrgentForm = document.getElementById('add-urgent-form');
-  const boxAList = document.getElementById('box-a-list');
-
-  const deleteDayDataBtn = document.getElementById('delete-day-data-btn');
-
-  const dropZones = document.querySelectorAll('.drop-zone');
-  
-  // 実行パネルの要素
-  const currentTaskDisplay = document.getElementById('current-task-display');
-  const timerClock = document.getElementById('timer-clock');
-  const startBtn = document.getElementById('start-btn');
-  const pauseBtn = document.getElementById('pause-btn');
-  const completeBtn = document.getElementById('complete-btn');
-  const cancelBtn = document.getElementById('cancel-btn');
-  const実績List = document.getElementById('実績-list');
-
-  // ===== アプリの状態を管理する変数 =====
-  let currentSelectedTask = null; // 現在選択中のタスク要素(li)
-  let timerInterval = null;       // setIntervalのID
-  let timerSeconds = 0;           // タイマーの秒数
-
-  // =======================================================
-  // ===== イベントリスナーの設定 =====
-  // =======================================================
-
-  // 計画タスク追加フォーム
-  addPlanForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (validateInput(planTaskInput)) {
-      createTaskElement(planTaskInput.value.trim(), planDurationInput.value, planList);
-      planTaskInput.value = '';
-      planTaskInput.focus();
-      // TODO: Firebaseへのデータ保存
-    }
-  });
-
-  // 割り込みタスク追加フォーム
-  addUrgentForm.addEventListener('submit', (e) => {
-    e.preventDefault();
-    if (validateInput(urgentTaskInput)) {
-      createTaskElement(urgentTaskInput.value.trim(), urgentDurationInput.value, boxAList);
-      urgentTaskInput.value = '';
-      // TODO: Firebaseへのデータ保存
-    }
-  });
-
-  // 全データリセットボタン
-  deleteDayDataBtn.addEventListener('click', () => {
-    if (confirm('この日のすべてのデータをリセットします。本当によろしいですか？')) {
-      document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
-      document.getElementById('daily-goal').value = '';
-      document.getElementById('daily-journal').value = '';
-      resetExecutionPanel();
-      alert('データをリセットしました。');
-      // TODO: Firebaseのデータ削除
-    }
-  });
-  
-  // 実行パネルのボタン
-  startBtn.addEventListener('click', startTimer);
-  pauseBtn.addEventListener('click', pauseTimer);
-  completeBtn.addEventListener('click', completeTask);
-  cancelBtn.addEventListener('click', cancelTask);
-
-  // ドラッグ＆ドロップ用
-  dropZones.forEach(zone => {
-    zone.addEventListener('dragover', handleDragOver);
-    zone.addEventListener('dragenter', handleDragEnter);
-    zone.addEventListener('dragleave', handleDragLeave);
-    zone.addEventListener('drop', handleDrop);
-  });
-  
-
-  // =======================================================
-  // ===== 関数定義 =====
-  // =======================================================
-
-  /**
-   * タスク要素を生成してリストに追加する
-   */
-  function createTaskElement(name, duration, listElement) {
-    const li = document.createElement('li');
-    li.className = 'task-item';
-    li.draggable = true;
-    li.dataset.name = name; // データを要素に保持
-    li.dataset.duration = duration;
-
-    li.innerHTML = `
-      <span class="task-name">${name}</span>
-      <span class="task-duration">${duration}分</span>
-      <button class="delete-btn" title="このタスクを削除">×</button>
-    `;
-
-    // --- 各イベントリスナーを設定 ---
-    // タスク全体をクリックしたら実行対象として選択
-    li.addEventListener('click', () => selectTask(li));
-    // 削除ボタンをクリックしたらタスクを削除
-    li.querySelector('.delete-btn').addEventListener('click', (e) => {
-      e.stopPropagation(); // 親要素(li)のクリックイベントが発火しないようにする
-      deleteTask(li);
-    });
-    // ドラッグ＆ドロップイベント
-    li.addEventListener('dragstart', handleDragStart);
-    li.addEventListener('dragend', handleDragEnd);
-
-    listElement.appendChild(li);
-  }
-  
-  /**
-   * 個別のタスクを削除する
-   */
-  function deleteTask(taskElement) {
-    if (confirm(`タスク「${taskElement.dataset.name}」を削除しますか？`)) {
-      if (taskElement === currentSelectedTask) {
-        resetExecutionPanel();
-      }
-      taskElement.remove();
-      // TODO: Firebaseからこのタスクを削除
-    }
-  }
-
-  /**
-   * タスクを実行対象として選択する
-   */
-  function selectTask(taskElement) {
-    // 既にタイマーが動いていたら選択できないようにする
-    if (timerInterval) {
-      alert('他のタスクを実行中です。完了または中止してください。');
-      return;
-    }
+    // ===== アプリの状態を管理する変数 =====
+    let currentSelectedTask = null;
+    let timerInterval = null;
+    let timerSeconds = 0;
+    let plannedSeconds = 0; // 計画時間(秒)
+    let startTime = 0;      // タイマー開始時刻(ミリ秒)
+    let pauseTime = 0;      // 一時停止した時点での経過時間
+    let wasExtended = false;
+    let originalTitle = document.title;
     
-    // 以前に選択されていたタスクのハイライトを解除
-    if (currentSelectedTask) {
-      currentSelectedTask.classList.remove('selected');
-    }
+    // =======================================================
+    // ===== イベントリスナー =====
+    // =======================================================
 
-    // 新しいタスクを選択状態にする
-    currentSelectedTask = taskElement;
-    currentSelectedTask.classList.add('selected');
-    
-    // 実行パネルを更新
-    currentTaskDisplay.innerHTML = `<strong>${currentSelectedTask.dataset.name}</strong>（予定: ${currentSelectedTask.dataset.duration}分）`;
-    resetTimer();
-    updateExecutionButtons(true);
-  }
-
-  // --- タイマー関連の関数 ---
-
-  function startTimer() {
-    if (!currentSelectedTask) return;
-    
-    startBtn.disabled = true;
-    pauseBtn.disabled = false;
-    
-    timerInterval = setInterval(() => {
-      timerSeconds++;
-      updateTimerDisplay();
-    }, 1000);
-  }
-
-  function pauseTimer() {
-    clearInterval(timerInterval);
-    timerInterval = null;
-    startBtn.disabled = false;
-    pauseBtn.disabled = true;
-  }
-  
-  function resetTimer() {
-      clearInterval(timerInterval);
-      timerInterval = null;
-      timerSeconds = 0;
-      updateTimerDisplay();
-  }
-
-  function updateTimerDisplay() {
-    const minutes = Math.floor(timerSeconds / 60).toString().padStart(2, '0');
-    const seconds = (timerSeconds % 60).toString().padStart(2, '0');
-    timerClock.textContent = `${minutes}:${seconds}`;
-  }
-  
-  // --- タスク完了/中止の関数 ---
-
-  function completeTask() {
-    if (!currentSelectedTask) return;
-    
-    pauseTimer(); // タイマーを止める
-    const actualDuration = Math.round(timerSeconds / 60); // 実績時間(分)
-
-    // 実績リストに要素を追加
-    const li = document.createElement('li');
-    li.className = 'task-item';
-    li.innerHTML = `
-      <span class="task-name">${currentSelectedTask.dataset.name}</span>
-      <span>(予定:${currentSelectedTask.dataset.duration}分 / 実績:${actualDuration}分)</span>
-    `;
-    実績List.appendChild(li);
-    // TODO: Firebaseに実績を保存
-
-    // 元のタスクを削除
-    currentSelectedTask.remove();
-    
-    // 実行パネルをリセット
-    resetExecutionPanel();
-  }
-  
-  function cancelTask() {
-    resetExecutionPanel();
-  }
-  
-  // --- UI更新/リセット用の関数 ---
-  
-  /**
-   * 実行パネル全体を初期状態に戻す
-   */
-  function resetExecutionPanel() {
-    if (currentSelectedTask) {
-      currentSelectedTask.classList.remove('selected');
-    }
-    currentSelectedTask = null;
-    currentTaskDisplay.innerHTML = `<p>実行するタスクをクリックで選択</p>`;
-    resetTimer();
-    updateExecutionButtons(false);
-  }
-
-  /**
-   * 実行パネルのボタンの有効/無効を切り替える
-   */
-  function updateExecutionButtons(isTaskSelected) {
-    startBtn.disabled = !isTaskSelected;
-    pauseBtn.disabled = true; // 最初は常に無効
-    completeBtn.disabled = !isTaskSelected;
-    cancelBtn.disabled = !isTaskSelected;
-  }
-  
-  /**
-   * 入力値のバリデーション
-   */
-  function validateInput(inputElement) {
-    inputElement.classList.remove('input-error');
-    if (inputElement.value.trim() === '') {
-      inputElement.classList.add('input-error');
-      inputElement.placeholder = "タスク名を入力してください";
-      return false;
-    }
-    inputElement.placeholder = "タスク名";
-    return true;
-  }
-  
-  // --- ドラッグ＆ドロップ関連の関数 ---
-  let draggedItem = null;
-
-  function handleDragStart(e) {
-    // タイマー作動中はドラッグ不可にする
-    if (timerInterval) {
+    addPlanForm.addEventListener('submit', (e) => {
         e.preventDefault();
-        return;
+        if (validateInput(planTaskInput)) {
+            createTaskElement(planTaskInput.value.trim(), planDurationInput.value, planList, '計画');
+            planTaskInput.value = '';
+            planTaskInput.focus();
+        }
+    });
+
+    addUrgentForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        if (validateInput(urgentTaskInput)) {
+            createTaskElement(urgentTaskInput.value.trim(), urgentDurationInput.value, boxAList, '緊急＆重要');
+            urgentTaskInput.value = '';
+        }
+    });
+
+    deleteDayDataBtn.addEventListener('click', () => {
+        if (confirm('この日のすべてのデータをリセットしますか？')) {
+            document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
+            document.getElementById('daily-goal').value = '';
+            document.getElementById('daily-journal').value = '';
+            resetExecutionPanel();
+            alert('データをリセットしました。');
+        }
+    });
+    
+    saveDailyBtn.addEventListener('click', () => {
+        saveConfirmMsg.textContent = '保存しました！';
+        saveConfirmMsg.classList.add('show');
+        setTimeout(() => saveConfirmMsg.classList.remove('show'), 2000);
+    });
+
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    completeBtn.addEventListener('click', () => completeTask('完了'));
+    cancelBtn.addEventListener('click', () => completeTask('中止'));
+
+    // モーダルボタンのイベント
+    modalCompleteBtn.addEventListener('click', () => completeTask('完了'));
+    modalExtendBtn.addEventListener('click', extendTimer);
+    modalCancelBtn.addEventListener('click', () => completeTask('中止'));
+
+    // ドラッグ＆ドロップ
+    dropZones.forEach(zone => {
+        zone.addEventListener('dragover', e => e.preventDefault());
+        zone.addEventListener('dragenter', e => { if (e.target.closest('.drop-zone')) e.target.closest('.drop-zone').classList.add('drag-over'); });
+        zone.addEventListener('dragleave', e => { if (e.target.closest('.drop-zone')) e.target.closest('.drop-zone').classList.remove('drag-over'); });
+        zone.addEventListener('drop', handleDrop);
+    });
+
+    // =======================================================
+    // ===== 関数定義 =====
+    // =======================================================
+    
+    /** タスク要素の生成 */
+    function createTaskElement(name, duration, listElement, priority) {
+        const li = document.createElement('li');
+        li.className = 'task-item';
+        li.draggable = true;
+        li.dataset.name = name;
+        li.dataset.duration = duration;
+        li.dataset.priority = priority;
+
+        li.innerHTML = `<span class="task-name">${name}</span><span class="task-duration">${duration}分</span><button class="delete-btn" title="削除">×</button>`;
+        li.addEventListener('click', () => selectTask(li));
+        li.querySelector('.delete-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteTask(li); });
+        li.addEventListener('dragstart', e => { if (!timerInterval) { e.dataTransfer.setData('text/plain', e.target.id); e.target.classList.add('dragging'); } else { e.preventDefault(); } });
+        li.addEventListener('dragend', e => e.target.classList.remove('dragging'));
+        listElement.appendChild(li);
     }
-    draggedItem = e.target;
-    setTimeout(() => e.target.classList.add('dragging'), 0);
-  }
 
-  function handleDragEnd(e) {
-    e.target.classList.remove('dragging');
-  }
-  
-  function handleDragOver(e) { e.preventDefault(); }
-  function handleDragEnter(e) { if(e.target.classList.contains('drop-zone')) e.target.classList.add('drag-over'); }
-  function handleDragLeave(e) { if(e.target.classList.contains('drop-zone')) e.target.classList.remove('drag-over'); }
-
-  function handleDrop(e) {
-    e.preventDefault();
-    const dropZone = e.target.closest('.drop-zone');
-    if (dropZone && draggedItem) {
-      const targetList = dropZone.querySelector('.task-list') || dropZone;
-      targetList.appendChild(draggedItem);
-      dropZone.classList.remove('drag-over');
-      // TODO: Firebase上のタスクの所属リストを更新
+    /** タスクの個別削除 */
+    function deleteTask(taskElement) {
+        if (confirm(`タスク「${taskElement.dataset.name}」を削除しますか？`)) {
+            if (taskElement === currentSelectedTask) resetExecutionPanel();
+            taskElement.remove();
+        }
     }
-  }
 
-  console.log('業務管理アプリが初期化されました。Ver.4.1');
+    /** タスクを実行対象として選択 */
+    function selectTask(taskElement) {
+        if (timerInterval) { alert('他のタスクを実行中です。'); return; }
+        if (currentSelectedTask) currentSelectedTask.classList.remove('selected');
+        currentSelectedTask = taskElement;
+        currentSelectedTask.classList.add('selected');
+        currentTaskDisplay.innerHTML = `<strong>${currentSelectedTask.dataset.name}</strong>（予定: ${currentSelectedTask.dataset.duration}分）`;
+        
+        plannedSeconds = parseInt(currentSelectedTask.dataset.duration, 10) * 60;
+        wasExtended = false;
+        resetTimer();
+        updateExecutionButtons(true, false);
+    }
+    
+    /** タイマー開始 */
+    function startTimer() {
+        if (!currentSelectedTask) return;
+        startTime = Date.now();
+        timerInterval = setInterval(updateTimer, 1000);
+        updateExecutionButtons(false, true);
+    }
+
+    /** タイマー一時停止 */
+    function pauseTimer() {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        pauseTime = timerSeconds; // 経過時間を保存
+        updateExecutionButtons(true, false);
+    }
+    
+    /** タイマー表示更新 (高精度) */
+    function updateTimer() {
+        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        timerSeconds = pauseTime + elapsed;
+        
+        const h = Math.floor(timerSeconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((timerSeconds % 3600) / 60).toString().padStart(2, '0');
+        const s = (timerSeconds % 60).toString().padStart(2, '0');
+        timerClock.textContent = `${h}:${m}:${s}`;
+        
+        // 時間切れの判定
+        if (timerSeconds >= plannedSeconds && !timesUpModal.style.display.includes('flex')) {
+            handleTimesUp();
+        }
+    }
+
+    /** 時間切れ処理 */
+    function handleTimesUp() {
+        pauseTimer();
+        notificationSound.play();
+        timerClock.classList.add('timer-flash');
+        document.title = "⏰ 時間です！";
+        modalTaskName.textContent = `タスク「${currentSelectedTask.dataset.name}」の予定時間です。どうしますか？`;
+        timesUpModal.style.display = 'flex';
+    }
+
+    /** タイマー延長 */
+    function extendTimer() {
+        const extraMinutes = parseInt(prompt("何分延長しますか？", "10"), 10);
+        if (!isNaN(extraMinutes) && extraMinutes > 0) {
+            plannedSeconds += extraMinutes * 60;
+            wasExtended = true;
+            hideModal();
+            startTimer();
+        }
+    }
+    
+    /** タスク完了/中止処理 */
+    function completeTask(status) {
+        if (!currentSelectedTask) return;
+        
+        pauseTimer();
+        const actualMinutes = Math.round(timerSeconds / 60);
+        const plannedMinutes = parseInt(currentSelectedTask.dataset.duration, 10);
+        const diff = plannedMinutes - actualMinutes;
+        
+        let finalStatus;
+        if (status === '中止') {
+            finalStatus = { text: '中止', class: 'status-canceled' };
+        } else if (wasExtended) {
+            finalStatus = { text: '延長', class: 'status-extended' };
+        } else if (diff > 0) {
+            finalStatus = { text: '短縮', class: 'status-shortened' };
+        } else {
+            finalStatus = { text: '計画通り', class: 'status-ontime' };
+        }
+        
+        addResultToList(currentSelectedTask.dataset, actualMinutes, diff, finalStatus);
+        
+        currentSelectedTask.remove();
+        resetExecutionPanel();
+    }
+    
+    /** 実績リストへの追加 */
+    function addResultToList(data, actualMinutes, diff, status) {
+        const li = document.createElement('li');
+        li.className = 'result-item';
+        
+        const priorityMap = { '緊急＆重要': '#f5222d', '重要＆非緊急': '#1890ff', '緊急＆非重要': '#faad14', '非緊急 & 非重要': '#bfbfbf', '計画': '#595959' };
+        const priorityColor = priorityMap[data.priority] || '#595959';
+        
+        li.innerHTML = `
+            <span class="result-priority" style="background-color:${priorityColor}">${data.priority}</span>
+            <span class="result-name">${data.name}</span>
+            <span class="result-status ${status.class}">${status.text}</span>
+            <span class="result-times">計画: ${data.duration}分 / 実績: ${actualMinutes}分</span>
+            <span class="result-diff">時間差: ${diff > 0 ? '+' : ''}${diff}分</span>
+        `;
+        実績List.appendChild(li);
+    }
+    
+    /** 実行パネルのリセット */
+    function resetExecutionPanel() {
+        if (currentSelectedTask) currentSelectedTask.classList.remove('selected');
+        currentSelectedTask = null;
+        currentTaskDisplay.innerHTML = `<p>実行するタスクをクリックで選択</p>`;
+        resetTimer();
+        updateExecutionButtons(false, false);
+        hideModal();
+    }
+
+    /** タイマーのリセット */
+    function resetTimer() {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerSeconds = 0;
+        pauseTime = 0;
+        timerClock.textContent = '00:00:00';
+    }
+
+    /** 実行ボタンの有効/無効化 */
+    function updateExecutionButtons(canStart, canPause) {
+        startBtn.disabled = !canStart;
+        pauseBtn.disabled = !canPause;
+        completeBtn.disabled = !(canStart || canPause);
+        cancelBtn.disabled = !(canStart || canPause);
+    }
+    
+    /** モーダルを隠す */
+    function hideModal() {
+        timesUpModal.style.display = 'none';
+        timerClock.classList.remove('timer-flash');
+        document.title = originalTitle;
+    }
+
+    /** ドラッグ＆ドロップ処理 */
+    function handleDrop(e) {
+        e.preventDefault();
+        const dropZone = e.target.closest('.drop-zone');
+        const draggedId = e.dataTransfer.getData('text/plain');
+        const draggedItem = document.getElementById(draggedId) || document.querySelector('.dragging');
+
+        if (dropZone && draggedItem) {
+            const priorityBox = dropZone.closest('.priority-box');
+            if (priorityBox) {
+                draggedItem.dataset.priority = priorityBox.querySelector('h3').textContent;
+            } else {
+                draggedItem.dataset.priority = '計画';
+            }
+            const targetList = dropZone.querySelector('.task-list') || dropZone;
+            targetList.appendChild(draggedItem);
+            dropZone.classList.remove('drag-over');
+        }
+    }
+    
+    /** 入力バリデーション */
+    function validateInput(input) {
+        input.classList.remove('input-error');
+        if (input.value.trim() === '') {
+            input.classList.add('input-error');
+            input.placeholder = "タスク名を入力してください";
+            return false;
+        }
+        return true;
+    }
+
+    console.log('業務管理アプリが初期化されました。Ver.5.0');
 });
