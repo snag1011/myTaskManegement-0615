@@ -9,6 +9,7 @@
   --text-color: #333;
   --border-color: #e0e0e0;
   --shadow-color: rgba(0, 0, 0, 0.08);
+  --selected-bg-color: #e8f0fe;
   --font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
 }
 
@@ -165,7 +166,7 @@ button:disabled {
 
 /* ===== タスクリスト ===== */
 .task-list {
-  min-height: 50px; /* ドロップエリアとして認識しやすくするため */
+  min-height: 50px;
   border-radius: 4px;
   padding: 5px;
   transition: background-color 0.3s;
@@ -173,25 +174,28 @@ button:disabled {
 
 .task-item {
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 12px;
   background-color: #f9f9f9;
   border: 1px solid var(--border-color);
   border-radius: 4px;
   margin-bottom: 8px;
-  cursor: grab;
+  cursor: pointer; /* 実行選択のためにポインターに */
   transition: background-color 0.3s, box-shadow 0.3s;
 }
 .task-item:hover {
     background-color: #f0f0f0;
     box-shadow: 0 2px 5px var(--shadow-color);
 }
-.task-item:active {
-  cursor: grabbing;
+/* 選択中のタスクのスタイル */
+.task-item.selected {
+  background-color: var(--selected-bg-color);
+  border-color: var(--primary-color);
+  box-shadow: 0 2px 8px rgba(74, 144, 226, 0.4);
 }
 
 .task-item .task-name {
+  flex-grow: 1; /* タスク名が伸びるように */
   font-weight: 500;
 }
 
@@ -201,10 +205,32 @@ button:disabled {
   background-color: #e9ecef;
   padding: 2px 8px;
   border-radius: 10px;
+  margin-right: 10px;
+}
+/* 個別削除ボタン */
+.task-item .delete-btn {
+  background: none;
+  border: none;
+  color: #aaa;
+  font-size: 1.2em;
+  font-weight: bold;
+  padding: 0 5px;
+  cursor: pointer;
+  visibility: hidden; /* 通常は見えない */
+  opacity: 0;
+  transition: color 0.3s, opacity 0.3s, visibility 0.3s;
+}
+.task-item:hover .delete-btn {
+  visibility: visible; /* ホバー時に表示 */
+  opacity: 1;
+}
+.task-item .delete-btn:hover {
+  color: var(--danger-color);
 }
 
+
 /* ドラッグ&ドロップのスタイル */
-.dragging {
+.task-item.dragging {
   opacity: 0.5;
   background: #cce5ff;
 }
@@ -214,6 +240,19 @@ button:disabled {
   border: 2px dashed var(--primary-color);
 }
 
+/* ===== 実行パネル ===== */
+#current-task-display {
+  background-color: #e9ecef;
+  padding: 10px;
+  border-radius: 4px;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+}
+#current-task-display p {
+  margin: 0;
+  color: #6c757d;
+}
 
 /* ===== 優先度マトリックス ===== */
 .priority-grid {
@@ -246,7 +285,7 @@ button:disabled {
 /* ===== レスポンシブ対応 ===== */
 @media (max-width: 1024px) {
   .main-grid {
-    grid-template-columns: 1fr; /* 1カラムレイアウトに */
+    grid-template-columns: 1fr;
   }
 }
 
