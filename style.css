@@ -1,142 +1,345 @@
-/* ===== グローバルスタイルと変数定義 ===== */
-:root {
-  --primary-color: #4a90e2;
-  --primary-hover-color: #357abd;
-  --success-color: #5cb85c;
-  --success-hover-color: #4cae4c;
-  --danger-color: #d9534f;
-  --danger-hover-color: #c9302c;
-  --bg-color: #f0f2f5;
-  --panel-bg-color: #ffffff;
-  --text-color: #333;
-  --border-color: #e0e0e0;
-  --shadow-color: rgba(0, 0, 0, 0.08);
-  --selected-bg-color: #e8f0fe;
-  
-  /* パネルの色分け */
-  --focus-panel-bg: #fffbe6;   /* 薄い黄色 */
-  --plan-panel-bg: #e6f7ff;    /*薄い青*/
-  --result-panel-bg: #f6ffed;  /*薄い緑*/
-  --exec-panel-bg: #f9f0ff;    /*薄い紫*/
-  
-  /* 優先度ボックスの色分け */
-  --box-a-bg: #fff1f0; /* 薄い赤 */
-  --box-b-bg: #e6f7ff; /* 薄い青 */
-  --box-c-bg: #fffbe6; /* 薄い黄 */
-  --box-d-bg: #f6f6f6; /* 薄いグレー */
-  
-  --font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
-}
+document.addEventListener('DOMContentLoaded', () => {
+    // ===== 要素の取得 =====
+    const planTaskInput = document.getElementById('plan-task-input');
+    const planDurationInput = document.getElementById('plan-duration-input');
+    const addPlanForm = document.getElementById('add-plan-form');
+    const planList = document.getElementById('plan-list');
+    const urgentTaskInput = document.getElementById('urgent-task-input');
+    const urgentDurationInput = document.getElementById('urgent-duration-input');
+    const addUrgentForm = document.getElementById('add-urgent-form');
+    const boxAList = document.getElementById('box-a-list');
+    const deleteDayDataBtn = document.getElementById('delete-day-data-btn');
+    const dropZones = document.querySelectorAll('.drop-zone');
+    const saveDailyBtn = document.getElementById('save-daily-btn');
+    const saveConfirmMsg = document.getElementById('save-confirm-msg');
+    const 実績List = document.getElementById('実績-list');
+    const exportPlanBtn = document.getElementById('export-plan-btn');
+    const export実績Btn = document.getElementById('export-実績-btn');
+    
+    const currentTaskDisplay = document.getElementById('current-task-display');
+    const timerClock = document.getElementById('timer-clock');
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const completeBtn = document.getElementById('complete-btn');
+    const cancelBtn = document.getElementById('cancel-btn');
 
-body {
-  font-family: var(--font-family);
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  margin: 0;
-  line-height: 1.6;
-}
+    const notificationSound = document.getElementById('notification-sound');
+    const timesUpModal = document.getElementById('times-up-modal');
+    const modalTaskName = document.getElementById('modal-task-name');
+    const modalCompleteBtn = document.getElementById('modal-complete-btn');
+    const modalExtendBtn = document.getElementById('modal-extend-btn');
+    const modalCancelBtn = document.getElementById('modal-cancel-btn');
 
-.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-h1, h2, h3 { color: var(--text-color); margin-top: 0; }
-ul { list-style: none; padding: 0; margin: 0; }
+    // ===== アプリの状態を管理する変数 =====
+    let currentSelectedTask = null;
+    let timerInterval = null;
+    let timerSeconds = 0;
+    let plannedSeconds = 0;
+    let startTime = 0;
+    let pauseTime = 0;
+    let wasExtended = false;
+    let originalTitle = document.title;
+    
+    // =======================================================
+    // ===== イベントリスナー =====
+    // =======================================================
+    addPlanForm.addEventListener('submit', (e) => { e.preventDefault(); if (validateInput(planTaskInput)) { createTaskElement(planTaskInput.value.trim(), planDurationInput.value, planList, '計画'); planTaskInput.value = ''; planTaskInput.focus(); } });
+    addUrgentForm.addEventListener('submit', (e) => { e.preventDefault(); if (validateInput(urgentTaskInput)) { createTaskElement(urgentTaskInput.value.trim(), urgentDurationInput.value, boxAList, '緊急＆重要'); urgentTaskInput.value = ''; } });
+    deleteDayDataBtn.addEventListener('click', () => { if (confirm('この日のすべてのデータをリセットしますか？')) { document.querySelectorAll('.task-list').forEach(list => list.innerHTML = ''); document.getElementById('daily-goal').value = ''; document.getElementById('daily-journal').value = ''; resetExecutionPanel(); alert('データをリセットしました。'); } });
+    saveDailyBtn.addEventListener('click', () => { saveConfirmMsg.textContent = '保存しました！'; saveConfirmMsg.classList.add('show'); setTimeout(() => saveConfirmMsg.classList.remove('show'), 2000); });
+    exportPlanBtn.addEventListener('click', exportPlanToCsv);
+    export実績Btn.addEventListener('click', export実績ToCsv);
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    completeBtn.addEventListener('click', () => completeTask('完了'));
+    cancelBtn.addEventListener('click', () => completeTask('中止'));
+    modalCompleteBtn.addEventListener('click', () => completeTask('完了'));
+    modalExtendBtn.addEventListener('click', extendTimer);
+    modalCancelBtn.addEventListener('click', () => completeTask('中止'));
+    dropZones.forEach(zone =>display = 'flex';
+    }
+    
+    function extendTimer() {
+        const extraSeconds = parseInt(prompt("何秒延長しますか？", "600"), 10); // ★秒単位に変更
+        if (!isNaN(extraSeconds) && extraSeconds > 0) {
+            plannedSeconds += extraSeconds; // ★秒単位に変更
+            wasExtended = true;
+            hideModal();
+            startTimer();
+        }
+    }
+    
+    function completeTask(status) {
+        if (!currentSelectedTask) return;
+        
+        pauseTimer();
+        const actualSeconds = timerSeconds; // ★秒単位に変更
+        const plannedSecondsValue = parseInt(currentSelectedTask.dataset.duration, 10); // ★秒単位に変更
+        const diff = plannedSecondsValue - actualSeconds; // ★秒単位に変更
+        
+        let finalStatus;
+        if (status === '中止') {
+            finalStatus = { text: '中止', class: 'status-canceled' };
+        } else if (wasExtended) {
+            finalStatus = { text: '延長', class: 'status-extended' };
+        } else if (diff > 0) {
+            finalStatus = { text: '短縮', class: 'status-shortened' };
+        } else {
+            finalStatus = { text: '計画通り', class: 'status-ontime' };
+        }
+        
+        addResultToList(currentSelectedTask.dataset, actualSeconds, diff, finalStatus);
+        
+        currentSelectedTask.remove();
+        resetExecutionPanel();
+    }
+    
+    function addResultToList(data, actualSeconds, diff, status) {
+        const li = document.createElement('li');
+        li.className = 'result-item';
+        // CSV出力用に実績データをdata属性に保存
+        li.dataset.priority = data.priority;
+        li.dataset.name = data.name;
+        li.dataset.status = status.text;
+        li.dataset.planned = data.duration;
+        li.dataset.actual = actualSeconds;
+        li.dataset.diff = diff;
+        
+        const priorityMap = { '緊急＆重要': '#f5222d', '重要＆非緊急': '#1890ff', '緊急＆非重要': '#faad14', '非緊急 & 非重要': '#bfbfbf', '計画': '#595959' };
+        const priorityColor = priorityMap[data.priority] || '#595959';
+        
+        li.innerHTML = `
+            <span class="result-priority" style="background-color:${priorityColor}">${data.priority}</span>
+            <span class="result-name">${data.name}</span>
+            <span class="result-status ${status.class}">${status.text}</span>
+            <span class="result-times">計画: ${data.duration}秒 / 実績: ${actualSeconds}秒</span>
+            <span class="result-diff">時間差: ${diff >= 0 ? '+' : ''}${diff}秒</span>
+        `;
+        実績List.appendChild(li);
+    }
+    
+    function exportPlanToCsv() {
+        const tasks = document.querySelectorAll('#plan-list .task-item, .priority-grid .task-item');
+        if (tasks.length === 0) {
+            alert('出力する計画タスクがありません。');
+            return;
+        }
 
-/* ===== ヘッダー ===== */
-.top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background-color: var(--panel-bg-color); border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+        csvContent += "優先度,タスク名,予定時間(秒)\r\n"; // ★秒単位に変更
 
-/* ===== メインレイアウトとパネルの色分け ===== */
-.main-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
-.panel { background-color: var(--panel-bg-color); border-radius: 8px; padding: 20px; box-shadow: 0 4px 12px var(--shadow-color); margin-bottom: 20px; }
-#focus-panel { background-color: var(--focus-panel-bg); }
-#plan-panel { background-color: var(--plan-panel-bg); }
-#result-panel { background-color: var(--result-panel-bg); }
-#execution-panel { background-color: var(--exec-panel-bg); }
-.panel h2 { margin-bottom: 15px; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
+        tasks.forEach(task => {
+            const priority = task.dataset.priority;
+            const name = task.dataset.name.replace(/"/g, '""');
+            const duration = task.dataset.duration;
+            csvContent += `"${priority}","${name}","${duration}"\r\n`;
+        });
 
-/* ===== フォーム要素 ===== */
-input[type="text"], input[type="number"], textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 10px; box-sizing: border-box; transition: border-color 0.3s, box-shadow 0.3s; }
-input[type="text"]:focus, input[type="number"]:focus, textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 5px rgba(74, 144, 226, 0.5); }
-.input-form { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
-.input-form input[type="text"] { flex-grow: 1; margin-bottom: 0; }
-.input-form input[type="number"] { width: 70px; margin-bottom: 0; }
-.duration-input-wrapper { display: flex; align-items: center; gap: 5px; }
-.input-error { border-color: var(--danger-color) !important; box-shadow: 0 0 5px rgba(217, 83, 79, 0.5) !important; }
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        const fileName = `計画_${new Date().toISOString().split('T')[0]}.csv`;
+        link. { zone.addEventListener('dragover', e => e.preventDefault()); zone.addEventListener('dragenter', e => { if (e.target.closest('.drop-zone')) e.target.closest('.drop-zone').classList.add('drag-over'); }); zone.addEventListener('dragleave', e => { if (e.target.closest('.drop-zone')) e.target.closest('.drop-zone').classList.remove('drag-over'); }); zone.addEventListener('drop', handleDrop); });
 
-/* ===== ボタン ===== */
-button { padding: 10px 15px; border: none; border-radius: 4px; background-color: var(--primary-color); color: white; font-weight: bold; cursor: pointer; transition: background-color 0.3s, transform 0.1s; }
-button:hover { background-color: var(--primary-hover-color); }
-button:active { transform: translateY(1px); }
-button:disabled { background-color: #ccc; cursor: not-allowed; }
-.button-danger { background-color: var(--danger-color); }
-.button-danger:hover { background-color: var(--danger-hover-color); }
-.button-success { background-color: var(--success-color); }
-.button-success:hover { background-color: var(--success-hover-color); }
-.export-button { background-color: #6c757d; }
-.export-button:hover { background-color: #5a6268; }
-.panel-actions { display: flex; gap: 10px; margin-top: 15px; }
+    // =======================================================
+    // ===== 関数定義 =====
+    // =======================================================
+    
+    // ★ 追加: 秒をMM:SS形式にフォーマットするヘルパー関数
+    function formatSecondsToMMSS(totalSeconds) {
+        if (isNaN(totalSeconds) || totalSeconds < 0) return "00:00";
+        const minutes = Math.floor(totalSeconds / 60).toString().padStart(2, '0');
+        const seconds = (totalSeconds % 60).setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
 
-/* ===== 保存確認メッセージ ===== */
-.save-confirm-msg { color: var(--success-color); font-weight: bold; margin-left: 10px; opacity: 0; transition: opacity 0.5s; }
-.save-confirm-msg.show { opacity: 1; }
+    function export実績ToCsv() {
+        const results = document.querySelectorAll('#実績-list .result-item');
+        if (results.length === 0) {
+            alert('出力する実績がありません。');
+            return;
+        }
 
-/* ===== タスクリスト ===== */
-.task-list { min-height: 50px; border-radius: 4px; padding: 5px; transition: background-color 0.3s; }
-.task-item { display: flex; align-items: center; padding: 12px; background-color: #fff; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 8px; cursor: pointer; transition: background-color 0.3s, box-shadow 0.3s; }
-.task-item:hover { background-color: #f8f9fa; box-shadow: 0 2px 5px var(--shadow-color); }
-.task-item.selected { background-color: var(--selected-bg-color); border-color: var(--primary-color); box-shadow: 0 2px 8px rgba(74, 144, 226, 0.4); }
-.task-item .task-name { flex-grow: 1; font-weight: 500; }
-.task-item .task-duration { font-size: 0.9em; color: #666; background-color: #e9ecef; padding: 2px 8px; border-radius: 10px; margin-right: 10px; }
-.task-item .delete-btn { background: none; border: none; color: #aaa; font-size: 1.2em; font-weight: bold; padding: 0 5px; cursor: pointer; visibility: hidden; opacity: 0; transition: color 0.3s, opacity 0.3s, visibility 0.3s; }
-.task-item:hover .delete-btn { visibility: visible; opacity: 1; }
-.task-item .delete-btn:hover { color: var(--danger-color); }
+        let csvContent = "data:text/csv;charset=utf-8,\uFEFF";
+        csvContent += "優先度,タスク名,ステータス,計画時間(秒),実績時間(秒),時間差(秒)\r\n"; // ★秒単位に変更
 
-/* ===== 実績リストのスタイル ===== */
-.result-item { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 15px; padding: 10px; font-size: 0.9em; }
-.result-priority { font-weight: bold; padding: 3px 8px; border-radius: 4px; color: #fff; }
-.result-name { font-weight: 500; flex-grow: 1; }
-.result-status { font-weight: bold; padding: 3px 8px; border-radius: 4px; }
-.result-times { color: #555; }
-.result-diff { color: #555; }
-/* 実績のステータス色 */
-.status-ontime { background-color: #e6f7ff; color: #1d39c4; }
-.status-shortened { background-color: #f6ffed; color: #389e0d; }
-.status-extended { background-color: #fffbe6; color: #d46b08; }
-.status-canceled { background-color: #fff1f0; color: #cf1322; }
+        results.forEach(result => {
+            const priority = result.dataset.priority;
+            const name = result.dataset.name.replace(/"/g, '""');
+            const status = result.dataset.status;
+            const planned = result.dataset.planned;
+            const actual = result.dataset.actual;
+            const diff = result.dataset.diff;
+            csvContent += `"${priority}","${name}","${status}","${planned}","${actual}","${diff}"\r\n`;
+        });
 
-/* ドラッグ&ドロップ */
-.task-item.dragging { opacity: 0.5; background: #cce5ff; }
-.drop-zone.drag-over { background-color: #e8f0fe; border: 2px dashed var(--primary-color); }
+        const encodedUri = encodeURI(csvContent);
+        toString().padStart(2, '0');
+        return `${minutes}:${seconds}`;
+    }
 
-/* ===== 実行パネルとタイマー ===== */
-#current-task-display { background-color: #e9ecef; padding: 10px; border-radius: 4px; min-height: 40px; display: flex; align-items: center; }
-#current-task-display p { margin: 0; color: #6c757d; }
-#timer-clock { font-size: 3.5rem; /* 大幅に大きく */ font-weight: bold; color: var(--primary-color); text-align: center; margin: 10px 0; letter-spacing: 2px; }
-.timer-flash { animation: flash 1s infinite; }
-@keyframes flash { 0%, 100% { background-color: var(--exec-panel-bg); } 50% { background-color: #ffdada; } }
+    function createTaskElement(name, durationInSeconds, listElement, priority) {
+        const li = document.createElement('li');
+        li.className = 'task-item';
+        li.draggable = true;
+        li.dataset.name = name;
+        li.dataset.duration = durationInSeconds; // ★ 変更点: durationは秒単位で保存
+        li.dataset.priority = priority;
 
-/* ===== 優先度マトリックスの色分け ===== */
-.priority-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-.priority-box { padding: 15px; border: 1px solid var(--border-color); border-radius: 6px; }
-#box-a { background-color: var(--box-a-bg); }
-#box-b { background-color: var(--box-b-bg); }
-#box-c { background-color: var(--box-c-bg); }
-#box-d { background-color: var(--box-d-bg); }
-.priority-box h3 { font-size: 1.1em; padding-bottom: 8px; border-color: #ccc; text-align: center; }
-.priority-box small { display: block; text-align: center; margin-top: -15px; margin-bottom: 10px; font-size: 0.8em; color: #666; }
+        // ★ 変更点: 表示をMM:SS形式に
+        li.innerHTML = `<span class="task-name">${name}</span><span class="task-duration">${formatSecondsToMMSS(parseInt(durationInSeconds,10))}</span><button class="delete-btn" title="削除">×</button>`;
+        li.addEventListener('click', () => selectTask(li));
+        li.querySelector('.delete-btn').addEventListener('click', (e) => { e.stopPropagation(); deleteTask(li); });
+        li.addEventListener('dragstart', e => { if (!timerInterval) { e.dataTransfer.setData('text/plain', e.target.id); e.target.classList.add('dragging'); } else { e.preventDefault(); } });
+        li.addEventListener('dragend', e => e.target.classList.remove('dragging'));
+        listElement.appendChild(li);
+    }
+    
+    function deleteTask(taskElement) { if (confirm(`タスク「${taskElement.dataset.name}」を削除しますか？`)) { if (taskElementconst link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        const fileName = `実績_${new Date().toISOString().split('T')[0]}.csv`;
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+    
+    function resetExecutionPanel() {
+        if (currentSelectedTask) currentSelectedTask.classList.remove('selected');
+        currentSelectedTask = null;
+        currentTaskDisplay.innerHTML = `<p>実行するタスクをクリックで選択</p>`;
+        resetTimer();
+        updateExecution === currentSelectedTask) resetExecutionPanel(); taskElement.remove(); } }
+    
+    function selectTask(taskElement) {
+        if (timerInterval) { alert('他のタスクを実行中です。'); return; }
+        if (currentSelectedTask) currentSelectedTask.classList.remove('selected');
+        currentSelectedTask = taskElement;
+        currentSelectedTask.classList.add('selected');
+        
+        // ★ 変更点: 表示をMM:SSButtons(false, false);
+        hideModal();
+    }
 
-/* ===== 時間切れ通知モーダル ===== */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-.modal-content { background-color: white; padding: 30px; border-radius: 8px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-.modal-content h2 { margin-bottom: 15px; }
-.modal-content p { margin-bottom: 25px; font-size: 1.1em; }
-.modal-actions { display: flex; justify-content: center; gap: 15px; }
+    function resetTimer() {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        timerSeconds = 0;
+        pauseTime = 0;
+        timerClock.textContent = '00:00:00';
+    }
 
-/* ===== レスポンシブ対応 ===== */
-@media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
-@media (max-width: 768px) {
-  .top-bar { flex-direction: column; gap: 10px; }
-  .input-form { flex-direction: column; align-items: stretch; }
-  .input-form input[type="number"] { width: 100%; }
-  .priority-grid { grid-template-columns: 1fr; }
-  #timer-clock { font-size: 2.5rem; }
-  .modal-actions { flex-direction: column; }
-}
+形式に
+        const durationInSeconds = parseInt(currentSelectedTask.dataset.duration, 10);
+        currentTaskDisplay.innerHTML = `<strong>${currentSelectedTask.dataset.name}</strong>（予定: ${formatSecondsTo    function updateExecutionButtons(canStart, canPause) {
+        startBtn.disabled = !canStart;MMSS(durationInSeconds)}）`;
+        
+        // ★ 変更点: 計画時間は分から
+        pauseBtn.disabled = !canPause;
+        completeBtn.disabled = !(canStart || canPause秒に変換せず、そのまま使用
+        plannedSeconds = durationInSeconds;
+        wasExtended = false;
+        );
+        cancelBtn.disabled = !(canStart || canPause);
+    }
+    
+    function hideModal() {
+        timesUpModal.style.display = 'none';
+        timerClock.classList.removeresetTimer();
+        updateExecutionButtons(true, false);
+    }
+    
+    function startTimer() { if('timer-flash');
+        document.title = originalTitle;
+    }
+    
+    function handleDrop(e (!currentSelectedTask) return; startTime = Date.now(); timerInterval = setInterval(updateTimer, 1000) {
+        e.preventDefault();
+        const dropZone = e.target.closest('.drop-zone');); updateExecutionButtons(false, true); }
+    function pauseTimer() { clearInterval(timerInterval); timerInterval = null; pauseTime = timerSeconds; updateExecutionButtons(true, false); }
+    
+    function updateTimer() {
+
+        const draggedId = e.dataTransfer.getData('text/plain');
+        const draggedItem = document        const elapsed = Math.floor((Date.now() - startTime) / 1000);
+        .getElementById(draggedId) || document.querySelector('.dragging');
+
+        if (dropZone && draggedItem) {
+            const priorityBox = dropZone.closest('.priority-box');
+            let newPriority = '計画timerSeconds = pauseTime + elapsed;
+        const h = Math.floor(timerSeconds / 3600).toString().padStart(2, '0');
+        const m = Math.floor((timerSeconds % 360'; // デフォルト
+            if (priorityBox) {
+                newPriority = priorityBox.querySelector('h3').textContent.0) / 60).toString().padStart(2, '0');
+        const s = (timerSecondstrim();
+            }
+            draggedItem.dataset.priority = newPriority;
+            
+            const targetList = dropZone.querySelector('.task-list') || dropZone;
+            targetList.appendChild(draggedItem);
+ % 60).toString().padStart(2, '0');
+        timerClock.textContent = `${h}:${m}:${s}`;
+        if (plannedSeconds > 0 && timerSeconds >= plannedSeconds && !timesUpModal.style            dropZone.classList.remove('drag-over');
+        }
+    }
+    
+    function validate.display.includes('flex')) { handleTimesUp(); }
+    }
+    
+    function handleTimesUpInput(input) {
+        input.classList.remove('input-error');
+        if (input.value.trim() === '') {
+            input.classList.add('input-error');
+            input.placeholder =() { pauseTimer(); notificationSound.play(); timerClock.classList.add('timer-flash'); document.title = " "タスク名を入力してください";
+            return false;
+        }
+        return true;
+    }
+
+⏰ 時間です！"; modalTaskName.textContent = `タスク「${currentSelectedTask.dataset.name}」の    console.log('業務管理アプリが初期化されました。Ver.5.2 (Time unit: seconds)');
+});
+予定時間です。どうしますか？`; timesUpModal.style.display = 'flex'; }
+    
+    function extendTimer() {
+        const extraMinutes = parseInt(prompt("何分延長しますか？", "10```
+
+### ご利用方法
+
+1.  上記の `index.html` と `app.js` のコードで、お手元のファイルをそれぞれ上書き保存してください。
+2.  ブラウザでページをハードリフレッシュ（"), 10);
+        if (!isNaN(extraMinutes) && extraMinutes > 0) {
+            `Ctrl+F5` や `Cmd+Shift+R`）して、変更を反映させてください。
+
+plannedSeconds += extraMinutes * 60; // ユーザーには分で尋ね、内部で秒に変換
+            wasExtended = true;
+            hideModal();
+            startTimer();
+        }
+    }
+    
+    function completeTask(status) {
+        if (!currentSelectedTask) return;
+        pauseTimer();
+        
+        // ★ 変更点: 時間の単位を全て秒で統一
+        const actualSeconds = timerSeconds;
+        const plannedSecondsValue = parseInt(currentSelectedTask.dataset.duration, 10);
+        const diffSeconds = plannedSecondsValue - actualSeconds;
+        
+        let finalStatus;
+        if (status === '中止') { finalStatus = { text: '中止', class: 'status-canceled' }; }
+        else if (wasExtended) { finalStatus = { text: '延長', class: 'status-extended' }; }
+        else if (diffSeconds > 0) { finalStatus = { text: '短縮', class: 'status-shortened' }; }
+        else { finalStatus = { text: '計画通り', class: 'status-ontime' }; }
+        
+        addResultToList(currentSelectedTask.dataset, actualSeconds, diffSeconds, finalStatus);
+        
+        currentSelectedTask.remove();
+        resetExecutionPanel();
+    }
+    
+    function addResultToList(data, actualSeconds, diffSeconds, status) {
+        const li = document.createElement('li');これで、すべての時間単位が「秒」として扱われるようになります。
+ご確認のほど、よろしくお願いいたします。
