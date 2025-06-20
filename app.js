@@ -3,11 +3,14 @@ document.addEventListener('DOMContentLoaded', () => {
     // =======================================================
     // ===== 1. Firebaseの初期設定と認証 ======================
     // =======================================================
-// Import the functions you need from the SDKs you need
+
+    // ▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼▼
+    // 【超重要】このfirebaseConfigオブジェクトを、
+    // あなた自身のFirebaseプロジェクトの設定情報に【置き換え】てください。
+    // Firebaseコンソールの「プロジェクトの設定」>「マイアプリ」から取得できます。
+
+    // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-//import { getAnalytics } from "firebase/analytics";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
 
@@ -21,12 +24,11 @@ const firebaseConfig = {
   appId: "1:1081004250364:web:fe78d16366ddbe953f3379"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);    
+    // ▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲▲
+
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
     
     // Firebaseの初期化
     firebase.initializeApp(firebaseConfig);
@@ -34,7 +36,7 @@ const analytics = getAnalytics(app);
     // 認証とFirestoreのインスタンス
     const auth = firebase.auth();
     const provider = new firebase.auth.GoogleAuthProvider();
-    // const db = firebase.firestore(); // Firestoreを使用する場合はこの行を有効化
+    // const db = firebase.firestore(); // Firestoreでデータを永続化する場合はこの行のコメントを解除
 
     // 認証関連のDOM要素
     const loginBtn = document.getElementById('login-btn');
@@ -70,7 +72,7 @@ const analytics = getAnalytics(app);
             logoutBtn.style.display = 'block';
             loginBtn.style.display = 'none';
             mainContent.style.display = 'block'; // メインコンテンツを表示
-            // Firestoreを使用する場合、ここでユーザーデータを読み込む
+            // Firestoreを使用する場合、ここでユーザーデータを読み込む処理を呼び出します。
             // (例: loadDataForUser(user.uid);)
 
         } else {
@@ -138,7 +140,7 @@ const analytics = getAnalytics(app);
     addPlanForm.addEventListener('submit', (e) => { e.preventDefault(); if (validateInput(planTaskInput)) { createTaskElement(planTaskInput.value.trim(), planDurationInput.value, planList, '計画'); planTaskInput.value = ''; planTaskInput.focus(); } });
     addUrgentForm.addEventListener('submit', (e) => { e.preventDefault(); if (validateInput(urgentTaskInput)) { createTaskElement(urgentTaskInput.value.trim(), urgentDurationInput.value, boxAList, '緊急＆重要'); urgentTaskInput.value = ''; } });
     deleteDayDataBtn.addEventListener('click', () => { if (confirm('この日のすべてのデータをリセットしますか？（この操作は元に戻せません）')) { document.querySelectorAll('.task-list').forEach(list => list.innerHTML = ''); document.getElementById('daily-goal').value = ''; document.getElementById('daily-journal').value = ''; resetExecutionPanel(); alert('UI上のデータをリセットしました。'); } });
-    saveDailyBtn.addEventListener('click', () => { saveConfirmMsg.textContent = '保存しました！'; saveConfirmMsg.classList.add('show'); setTimeout(() => saveConfirmMsg.classList.remove('show'), 2000); });
+    saveDailyBtn.addEventListener('click', () => { saveConfirmMsg.textContent = '保存しました！'; saveConfirmMsg.classList.add('show'); setTimeout(() => saveConfirmMsg.classList.remove('show'), 2000); /* ここにFirestoreへの保存処理を追加 */ });
     exportPlanBtn.addEventListener('click', exportPlanToCsv);
     export実績Btn.addEventListener('click', export実績ToCsv);
     startBtn.addEventListener('click', startTimer);
@@ -156,7 +158,7 @@ const analytics = getAnalytics(app);
         li.className = 'task-item';
         li.draggable = true;
         li.dataset.name = name;
-        li.dataset.duration = durationInSeconds; // 秒単位で保存
+        li.dataset.duration = durationInSeconds;
         li.dataset.priority = priority;
 
         li.innerHTML = `<span class="task-name">${name}</span><span class="task-duration">${durationInSeconds}秒</span><button class="delete-btn" title="削除">×</button>`;
@@ -330,5 +332,5 @@ const analytics = getAnalytics(app);
         return true;
     }
 
-    console.log('業務管理アプリが初期化されました。Ver.6.0 (Auth Ready)');
+    console.log('業務管理アプリが初期化されました。Ver.6.1 (Auth Fixed)');
 });
