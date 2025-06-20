@@ -1,5 +1,96 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // ===== 要素の取得 =====
+
+    // =======================================================
+    // ===== 1. Firebaseの初期設定と認証 ======================
+    // =======================================================
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
+  authDomain: "my-private-task-manegment.firebaseapp.com",
+  projectId: "my-private-task-manegment",
+  storageBucket: "my-private-task-manegment.firebasestorage.app",
+  messagingSenderId: "272952129117",
+  appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4",
+  measurementId: "G-NRTVNKPLF6"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const analytics = getAnalytics(app);
+    
+    // Firebaseの初期化
+    firebase.initializeApp(firebaseConfig);
+
+    // 認証とFirestoreのインスタンス
+    const auth = firebase.auth();
+    const provider = new firebase.auth.GoogleAuthProvider();
+    // const db = firebase.firestore(); // Firestoreを使用する場合はこの行を有効化
+
+    // 認証関連のDOM要素
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userInfo = document.getElementById('user-info');
+    const userName = document.getElementById('user-name');
+    const userPhoto = document.getElementById('user-photo');
+    const mainContent = document.getElementById('main-content');
+
+    // ログイン処理
+    const signIn = () => {
+        auth.signInWithPopup(provider).catch(error => {
+            console.error("Googleログインに失敗しました:", error);
+            alert("ログインに失敗しました。コンソールでエラー内容を確認してください。");
+        });
+    };
+
+    // ログアウト処理
+    const signOut = () => {
+        auth.signOut().catch(error => console.error("ログアウトに失敗しました:", error));
+    };
+
+    loginBtn.addEventListener('click', signIn);
+    logoutBtn.addEventListener('click', signOut);
+
+    // 認証状態の監視
+    auth.onAuthStateChanged(user => {
+        if (user) {
+            // --- ログイン時の処理 ---
+            userName.textContent = user.displayName;
+            userPhoto.src = user.photoURL;
+            userInfo.style.display = 'flex';
+            logoutBtn.style.display = 'block';
+            loginBtn.style.display = 'none';
+            mainContent.style.display = 'block'; // メインコンテンツを表示
+            // Firestoreを使用する場合、ここでユーザーデータを読み込む
+            // (例: loadDataForUser(user.uid);)
+
+        } else {
+            // --- ログアウト時の処理 ---
+            userInfo.style.display = 'none';
+            logoutBtn.style.display = 'none';
+            loginBtn.style.display = 'block';
+            mainContent.style.display = 'none'; // メインコンテンツを非表示
+
+            // UIをリセット
+            document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
+            document.getElementById('daily-goal').value = '';
+            document.getElementById('daily-journal').value = '';
+            resetExecutionPanel();
+        }
+    });
+
+
+    // =======================================================
+    // ===== 2. タスク管理・タイマー機能 =======================
+    // =======================================================
+
+    // ===== 要素の取得（認証以外）=====
     const planTaskInput = document.getElementById('plan-task-input');
     const planDurationInput = document.getElementById('plan-duration-input');
     const addPlanForm = document.getElementById('add-plan-form');
@@ -40,13 +131,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let wasExtended = false;
     let originalTitle = document.title;
     
-    // =======================================================
-    // ===== イベントリスナー =====
-    // =======================================================
-
+    // ===== イベントリスナー（タスク管理）=====
     addPlanForm.addEventListener('submit', (e) => { e.preventDefault(); if (validateInput(planTaskInput)) { createTaskElement(planTaskInput.value.trim(), planDurationInput.value, planList, '計画'); planTaskInput.value = ''; planTaskInput.focus(); } });
     addUrgentForm.addEventListener('submit', (e) => { e.preventDefault(); if (validateInput(urgentTaskInput)) { createTaskElement(urgentTaskInput.value.trim(), urgentDurationInput.value, boxAList, '緊急＆重要'); urgentTaskInput.value = ''; } });
-    deleteDayDataBtn.addEventListener('click', () => { if (confirm('この日のすべてのデータをリセットしますか？')) { document.querySelectorAll('.task-list').forEach(list => list.innerHTML = ''); document.getElementById('daily-goal').value = ''; document.getElementById('daily-journal').value = ''; resetExecutionPanel(); alert('データをリセットしました。'); } });
+    deleteDayDataBtn.addEventListener('click', () => { if (confirm('この日のすべてのデータをリセットしますか？（この操作は元に戻せません）')) { document.querySelectorAll('.task-list').forEach(list => list.innerHTML = ''); document.getElementById('daily-goal').value = ''; document.getElementById('daily-journal').value = ''; resetExecutionPanel(); alert('UI上のデータをリセットしました。'); } });
     saveDailyBtn.addEventListener('click', () => { saveConfirmMsg.textContent = '保存しました！'; saveConfirmMsg.classList.add('show'); setTimeout(() => saveConfirmMsg.classList.remove('show'), 2000); });
     exportPlanBtn.addEventListener('click', exportPlanToCsv);
     export実績Btn.addEventListener('click', export実績ToCsv);
@@ -59,11 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
     modalCancelBtn.addEventListener('click', () => completeTask('中止'));
     dropZones.forEach(zone => { zone.addEventListener('dragover', e => e.preventDefault()); zone.addEventListener('dragenter', e => { if (e.target.closest('.drop-zone')) e.target.closest('.drop-zone').classList.add('drag-over'); }); zone.addEventListener('dragleave', e => { if (e.target.closest('.drop-zone')) e.target.closest('.drop-zone').classList.remove('drag-over'); }); zone.addEventListener('drop', handleDrop); });
 
-    // =======================================================
-    // ===== 関数定義 =====
-    // =======================================================
-    
-    /** タスク要素の生成 */
+    // ===== 関数定義（タスク管理）=====
     function createTaskElement(name, durationInSeconds, listElement, priority) {
         const li = document.createElement('li');
         li.className = 'task-item';
@@ -80,10 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
         listElement.appendChild(li);
     }
     
-    /** タスクの個別削除 */
     function deleteTask(taskElement) { if (confirm(`タスク「${taskElement.dataset.name}」を削除しますか？`)) { if (taskElement === currentSelectedTask) resetExecutionPanel(); taskElement.remove(); } }
     
-    /** タスクを実行対象として選択 */
     function selectTask(taskElement) {
         if (timerInterval) { alert('他のタスクを実行中です。'); return; }
         if (currentSelectedTask) currentSelectedTask.classList.remove('selected');
@@ -99,13 +181,10 @@ document.addEventListener('DOMContentLoaded', () => {
         updateExecutionButtons(true, false);
     }
     
-    /** タイマー開始 */
     function startTimer() { if (!currentSelectedTask) return; startTime = Date.now(); timerInterval = setInterval(updateTimer, 1000); updateExecutionButtons(false, true); }
     
-    /** タイマー一時停止 */
     function pauseTimer() { clearInterval(timerInterval); timerInterval = null; pauseTime = timerSeconds; updateExecutionButtons(true, false); }
     
-    /** タイマー表示更新 */
     function updateTimer() {
         const elapsed = Math.floor((Date.now() - startTime) / 1000);
         timerSeconds = pauseTime + elapsed;
@@ -116,10 +195,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (plannedSeconds > 0 && timerSeconds >= plannedSeconds && !timesUpModal.style.display.includes('flex')) { handleTimesUp(); }
     }
     
-    /** 時間切れ処理 */
     function handleTimesUp() { pauseTimer(); notificationSound.play(); timerClock.classList.add('timer-flash'); document.title = "⏰ 時間です！"; modalTaskName.textContent = `タスク「${currentSelectedTask.dataset.name}」の予定時間です。どうしますか？`; timesUpModal.style.display = 'flex'; }
     
-    /** タイマー延長 */
     function extendTimer() {
         const extraSeconds = parseInt(prompt("何秒延長しますか？", "600"), 10);
         if (!isNaN(extraSeconds) && extraSeconds > 0) {
@@ -130,7 +207,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    /** タスク完了/中止処理 */
     function completeTask(status) {
         if (!currentSelectedTask) return;
         pauseTimer();
@@ -151,7 +227,6 @@ document.addEventListener('DOMContentLoaded', () => {
         resetExecutionPanel();
     }
     
-    /** 実績リストへの追加 */
     function addResultToList(data, actualSeconds, diffSeconds, status) {
         const li = document.createElement('li');
         li.className = 'result-item';
@@ -175,7 +250,6 @@ document.addEventListener('DOMContentLoaded', () => {
         実績List.appendChild(li);
     }
     
-    /** 計画CSV出力 */
     function exportPlanToCsv() {
         const tasks = document.querySelectorAll('#plan-list .task-item, .priority-grid .task-item');
         if (tasks.length === 0) { alert('出力する計画タスクがありません。'); return; }
@@ -190,7 +264,6 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadCsv(csvContent, '計画');
     }
 
-    /** 実績CSV出力 */
     function export実績ToCsv() {
         const results = document.querySelectorAll('#実績-list .result-item');
         if (results.length === 0) { alert('出力する実績がありません。'); return; }
@@ -208,7 +281,6 @@ document.addEventListener('DOMContentLoaded', () => {
         downloadCsv(csvContent, '実績');
     }
 
-    /** CSVダウンロード実行ヘルパー */
     function downloadCsv(content, prefix) {
         const encodedUri = encodeURI(content);
         const link = document.createElement("a");
@@ -220,19 +292,11 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.removeChild(link);
     }
     
-    /** 実行パネルのリセット */
     function resetExecutionPanel() { if (currentSelectedTask) currentSelectedTask.classList.remove('selected'); currentSelectedTask = null; currentTaskDisplay.innerHTML = `<p>実行するタスクをクリックで選択</p>`; resetTimer(); updateExecutionButtons(false, false); hideModal(); }
-
-    /** タイマーのリセット */
     function resetTimer() { clearInterval(timerInterval); timerInterval = null; timerSeconds = 0; pauseTime = 0; timerClock.textContent = '00:00:00'; }
-
-    /** 実行ボタンの有効/無効化 */
     function updateExecutionButtons(canStart, canPause) { startBtn.disabled = !canStart; pauseBtn.disabled = !canPause; completeBtn.disabled = !(canStart || canPause); cancelBtn.disabled = !(canStart || canPause); }
-    
-    /** モーダルを隠す */
     function hideModal() { timesUpModal.style.display = 'none'; timerClock.classList.remove('timer-flash'); document.title = originalTitle; }
     
-    /** ドラッグ＆ドロップ処理 */
     function handleDrop(e) {
         e.preventDefault();
         const dropZone = e.target.closest('.drop-zone');
@@ -253,7 +317,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
     
-    /** 入力バリデーション */
     function validateInput(input) {
         input.classList.remove('input-error');
         if (input.value.trim() === '') {
@@ -264,5 +327,5 @@ document.addEventListener('DOMContentLoaded', () => {
         return true;
     }
 
-    console.log('業務管理アプリが初期化されました。Ver.5.2 (Time unit: seconds)');
+    console.log('業務管理アプリが初期化されました。Ver.6.0 (Auth Ready)');
 });
