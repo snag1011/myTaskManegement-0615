@@ -3,8 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>🚀【Pro版 Ver.4.1】業務管理アプリ</title>
-  <!-- style.css を読み込み -->
+  <title>🚀【Pro版 Ver.5.0】業務管理アプリ</title>
   <link rel="stylesheet" href="style.css" />
   <!-- Firebase SDK (変更なし) -->
   <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
@@ -28,7 +27,7 @@
 
     <!-- ===== メインコンテンツ ===== -->
     <main id="main-content" class="main-content">
-      <h1>🚀【Pro版 Ver.4.1】業務管理アプリ</h1>
+      <h1>🚀【Pro版 Ver.5.0】業務管理アプリ</h1>
       <div class="date-selector-panel">
         <input type="date" id="main-date-picker" />
       </div>
@@ -37,13 +36,14 @@
         <!-- ===== 左カラム: 計画と実績 ===== -->
         <div class="planning-column">
           <!-- 本日のフォーカス -->
-          <section class="panel">
+          <section id="focus-panel" class="panel">
             <h2>本日のフォーカス</h2>
             <label for="daily-goal"><strong>本日の目標</strong></label>
             <input type="text" id="daily-goal" class="daily-input" placeholder="今日達成したい最も重要なこと" />
             <label for="daily-journal"><strong>本日のジャーナル</strong></label>
             <textarea id="daily-journal" class="daily-input" rows="4" placeholder="一日の終わりに振り返りを記録しよう"></textarea>
             <button id="save-daily-btn">目標とジャーナルを保存</button>
+            <span id="save-confirm-msg" class="save-confirm-msg"></span>
           </section>
 
           <!-- 計画タスク -->
@@ -65,7 +65,7 @@
           </section>
 
           <!-- 実績 -->
-          <section id="実績-panel" class="panel">
+          <section id="result-panel" class="panel">
             <h2>実績</h2>
             <ul id="実績-list" class="task-list"></ul>
             <div class="panel-actions">
@@ -80,7 +80,7 @@
             <h2>実行と分類</h2>
             <div class="execution-top">
               <div id="current-task-display"><p>実行するタスクをクリックで選択</p></div>
-              <div id="timer-clock">00:00</div>
+              <div id="timer-clock">00:00:00</div>
             </div>
             <div class="execution-controls">
               <button id="start-btn" disabled aria-label="開始/再開">▶️ 開始/再開</button>
@@ -104,23 +104,19 @@
             <!-- 優先度マトリックス -->
             <div class="priority-grid">
               <div id="box-a" class="priority-box drop-zone" aria-labelledby="box-a-heading">
-                <h3 id="box-a-heading">🔥 緊急＆重要</h3>
-                <small>(今すぐ取り組むべきタスク)</small>
+                <h3 id="box-a-heading">🔥 緊急＆重要</h3><small>(今すぐ取り組むべき)</small>
                 <ul id="box-a-list" class="task-list"></ul>
               </div>
               <div id="box-b" class="priority-box drop-zone" aria-labelledby="box-b-heading">
-                <h3 id="box-b-heading">🌱 重要＆非緊急</h3>
-                <small>(計画的に取り組むべきタスク)</small>
+                <h3 id="box-b-heading">🌱 重要＆非緊急</h3><small>(計画的に取り組むべき)</small>
                 <ul id="box-b-list" class="task-list"></ul>
               </div>
               <div id="box-c" class="priority-box drop-zone" aria-labelledby="box-c-heading">
-                <h3 id="box-c-heading">⚡️ 緊急＆非重要</h3>
-                <small>(移譲できるタスク)</small>
+                <h3 id="box-c-heading">⚡️ 緊急＆非重要</h3><small>(移譲・効率化すべき)</small>
                 <ul id="box-c-list" class="task-list"></ul>
               </div>
               <div id="box-d" class="priority-box drop-zone" aria-labelledby="box-d-heading">
-                <h3 id="box-d-heading">🗑️ 非緊急 & 非重要</h3>
-                <small>(削除できるタスク)</small>
+                <h3 id="box-d-heading">🗑️ 非緊急 & 非重要</h3><small>(やめるべき)</small>
                 <ul id="box-d-list" class="task-list"></ul>
               </div>
             </div>
@@ -128,8 +124,24 @@
         </div>
       </div>
     </main>
+
+    <!-- ===== 時間切れ通知モーダル ===== -->
+    <div id="times-up-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+        <h2>⏰ 時間です！</h2>
+        <p id="modal-task-name">タスクの予定時間になりました。どうしますか？</p>
+        <div class="modal-actions">
+          <button id="modal-complete-btn" class="button-success">✅ 完了する</button>
+          <button id="modal-extend-btn">🕰️ 延長する</button>
+          <button id="modal-cancel-btn" class="button-danger">⏹️ 中止する</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- ===== 通知音再生用 ===== -->
+    <audio id="notification-sound" src="Assort_SE12-21.mp3" preload="auto"></audio>
   </div>
-  <!-- app.js を読み込み -->
+
   <script src="app.js"></script>
 </body>
 </html>
