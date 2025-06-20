@@ -1,3 +1,5 @@
+/* (前回のCSSコードは省略) */
+/* ...前回のCSSコードをここにすべて貼り付け... */
 /* ===== グローバルスタイルと変数定義 ===== */
 :root {
   --primary-color: #4a90e2;
@@ -7,136 +9,60 @@
   --danger-color: #d9534f;
   --danger-hover-color: #c9302c;
   --bg-color: #f0f2f5;
-  --panel-bg-color: #ffffff;
+  --panel-bg-color" class="priority-box drop-zone" aria-labelledby="box-c-heading">
+                <h3 id="box-c-heading">⚡️ 緊急＆非重要</h3><small>(移譲・効率化すべき)</small>
+                <ul id="box-c-list" class="task-list"></ul>
+              </div>
+              <div id="box-d" class="priority-box drop-zone" aria-labelledby="box-d-heading">
+                <h3 id="box-d-heading">🗑️ 非緊急 & 非重要</h3><small>(やめるべき)</small>
+                <ul id="box-d-list: #ffffff;
   --text-color: #333;
   --border-color: #e0e0e0;
   --shadow-color: rgba(0, 0, 0, 0.08);
   --selected-bg-color: #e8f0fe;
   
   /* パネルの色分け */
-  --focus-panel-bg: #fffbe6;   /* 薄い黄色 */
+  --focus-panel-bg: #fffbe6;   /* 薄い黄色" class="task-list"></ul>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <!-- ===== 時間切れ通知モーダル ===== -->
+    <div id="times */
   --plan-panel-bg: #e6f7ff;    /*薄い青*/
   --result-panel-bg: #f6ffed;  /*薄い緑*/
-  --exec-panel-bg: #f9f0ff;    /*薄い紫*/
+  --exec-panel-up-modal" class="modal-overlay" style="display: none;">
+      <div class="modal-content">
+        <h2>⏰ 時間です！</h2>
+        <p id="modal-task-name">タスクの予定時間になりました。どうしますか？</p>
+        <div class="modal-actions">
+-bg: #f9f0ff;    /*薄い紫*/
   
   /* 優先度ボックスの色分け */
-  --box-a-bg: #fff1f0; /* 薄い赤 */
+  --box-a-bg: #fff1f0; /* 薄い赤 */          <button id="modal-complete-btn" class="button-success">✅ 完了する</button>
   --box-b-bg: #e6f7ff; /* 薄い青 */
-  --box-c-bg: #fffbe6; /* 薄い黄 */
-  --box-d-bg: #f6f6f6; /* 薄いグレー */
+  --
+          <button id="modal-extend-btn">🕰️ 延長する</button>
+          <button id="modal-cancel-btn" class="button-danger">⏹️ 中止する</button>
+        box-c-bg: #fffbe6; /* 薄い黄 */
+  --box-d-bg</div>
+      </div>
+    </div>
+    
+    <!-- ===== 通知音再生用 ===== -->
+    <audio id="notification-sound" src="notification.mp3" preload="auto"></audio>
+  </div>
+
+  <: #f6f6f6; /* 薄いグレー */
   
   --font-family: 'Helvetica Neue', Arial, 'Hiragino Kaku Gothic ProN', 'Hiragino Sans', Meiryo, sans-serif;
 }
 
 body {
   font-family: var(--font-family);
-  background-color: var(--bg-color);
-  color: var(--text-color);
-  margin: 0;
-  line-height: 1.6;
-}
-
-.container { max-width: 1400px; margin: 0 auto; padding: 20px; }
-h1, h2, h3 { color: var(--text-color); margin-top: 0; }
-ul { list-style: none; padding: 0; margin: 0; }
-
-/* ===== ヘッダー ===== */
-.top-bar { display: flex; justify-content: space-between; align-items: center; padding: 10px 20px; background-color: var(--panel-bg-color); border-bottom: 1px solid var(--border-color); margin-bottom: 20px; }
-
-/* ===== メインレイアウトとパネルの色分け ===== */
-.main-grid { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
-.panel { background-color: var(--panel-bg-color); border-radius: 8px; padding: 20px; box-shadow: 0 4px 12px var(--shadow-color); margin-bottom: 20px; }
-#focus-panel { background-color: var(--focus-panel-bg); }
-#plan-panel { background-color: var(--plan-panel-bg); }
-#result-panel { background-color: var(--result-panel-bg); }
-#execution-panel { background-color: var(--exec-panel-bg); }
-.panel h2 { margin-bottom: 15px; border-bottom: 2px solid var(--primary-color); padding-bottom: 10px; }
-
-/* ===== フォーム要素 ===== */
-input[type="text"], input[type="number"], textarea { width: 100%; padding: 10px; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 10px; box-sizing: border-box; transition: border-color 0.3s, box-shadow 0.3s; }
-input[type="text"]:focus, input[type="number"]:focus, textarea:focus { outline: none; border-color: var(--primary-color); box-shadow: 0 0 5px rgba(74, 144, 226, 0.5); }
-.input-form { display: flex; gap: 10px; margin-bottom: 15px; align-items: center; }
-.input-form input[type="text"] { flex-grow: 1; margin-bottom: 0; }
-.input-form input[type="number"] { width: 70px; margin-bottom: 0; }
-.duration-input-wrapper { display: flex; align-items: center; gap: 5px; }
-.input-error { border-color: var(--danger-color) !important; box-shadow: 0 0 5px rgba(217, 83, 79, 0.5) !important; }
-
-/* ===== ボタン ===== */
-button { padding: 10px 15px; border: none; border-radius: 4px; background-color: var(--primary-color); color: white; font-weight: bold; cursor: pointer; transition: background-color 0.3s, transform 0.1s; }
-button:hover { background-color: var(--primary-hover-color); }
-button:active { transform: translateY(1px); }
-button:disabled { background-color: #ccc; cursor: not-allowed; }
-.button-danger { background-color: var(--danger-color); }
-.button-danger:hover { background-color: var(--danger-hover-color); }
-.button-success { background-color: var(--success-color); }
-.button-success:hover { background-color: var(--success-hover-color); }
-.export-button { background-color: #6c757d; }
-.export-button:hover { background-color: #5a6268; }
-.panel-actions { display: flex; gap: 10px; margin-top: 15px; }
-
-/* ===== 保存確認メッセージ ===== */
-.save-confirm-msg { color: var(--success-color); font-weight: bold; margin-left: 10px; opacity: 0; transition: opacity 0.5s; }
-.save-confirm-msg.show { opacity: 1; }
-
-/* ===== タスクリスト ===== */
-.task-list { min-height: 50px; border-radius: 4px; padding: 5px; transition: background-color 0.3s; }
-.task-item { display: flex; align-items: center; padding: 12px; background-color: #fff; border: 1px solid var(--border-color); border-radius: 4px; margin-bottom: 8px; cursor: pointer; transition: background-color 0.3s, box-shadow 0.3s; }
-.task-item:hover { background-color: #f8f9fa; box-shadow: 0 2px 5px var(--shadow-color); }
-.task-item.selected { background-color: var(--selected-bg-color); border-color: var(--primary-color); box-shadow: 0 2px 8px rgba(74, 144, 226, 0.4); }
-.task-item .task-name { flex-grow: 1; font-weight: 500; }
-.task-item .task-duration { font-size: 0.9em; color: #666; background-color: #e9ecef; padding: 2px 8px; border-radius: 10px; margin-right: 10px; }
-.task-item .delete-btn { background: none; border: none; color: #aaa; font-size: 1.2em; font-weight: bold; padding: 0 5px; cursor: pointer; visibility: hidden; opacity: 0; transition: color 0.3s, opacity 0.3s, visibility 0.3s; }
-.task-item:hover .delete-btn { visibility: visible; opacity: 1; }
-.task-item .delete-btn:hover { color: var(--danger-color); }
-
-/* ===== 実績リストのスタイル ===== */
-.result-item { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 15px; padding: 10px; font-size: 0.9em; }
-.result-priority { font-weight: bold; padding: 3px 8px; border-radius: 4px; color: #fff; }
-.result-name { font-weight: 500; flex-grow: 1; }
-.result-status { font-weight: bold; padding: 3px 8px; border-radius: 4px; }
-.result-times { color: #555; }
-.result-diff { color: #555; }
-/* 実績のステータス色 */
-.status-ontime { background-color: #e6f7ff; color: #1d39c4; }
-.status-shortened { background-color: #f6ffed; color: #389e0d; }
-.status-extended { background-color: #fffbe6; color: #d46b08; }
-.status-canceled { background-color: #fff1f0; color: #cf1322; }
-
-/* ドラッグ&ドロップ */
-.task-item.dragging { opacity: 0.5; background: #cce5ff; }
-.drop-zone.drag-over { background-color: #e8f0fe; border: 2px dashed var(--primary-color); }
-
-/* ===== 実行パネルとタイマー ===== */
-#current-task-display { background-color: #e9ecef; padding: 10px; border-radius: 4px; min-height: 40px; display: flex; align-items: center; }
-#current-task-display p { margin: 0; color: #6c757d; }
-#timer-clock { font-size: 3.5rem; font-weight: bold; color: var(--primary-color); text-align: center; margin: 10px 0; letter-spacing: 2px; }
-.timer-flash { animation: flash 1s infinite; }
-@keyframes flash { 0%, 100% { background-color: var(--exec-panel-bg); } 50% { background-color: #ffdada; } }
-
-/* ===== 優先度マトリックスの色分け ===== */
-.priority-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 15px; }
-.priority-box { padding: 15px; border: 1px solid var(--border-color); border-radius: 6px; }
-#box-a { background-color: var(--box-a-bg); }
-#box-b { background-color: var(--box-b-bg); }
-#box-c { background-color: var(--box-c-bg); }
-#box-d { background-color: var(--box-d-bg); }
-.priority-box h3 { font-size: 1.1em; padding-bottom: 8px; border-color: #ccc; text-align: center; }
-.priority-box small { display: block; text-align: center; margin-top: -15px; margin-bottom: 10px; font-size: 0.8em; color: #666; }
-
-/* ===== 時間切れ通知モーダル ===== */
-.modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.6); display: flex; justify-content: center; align-items: center; z-index: 1000; }
-.modal-content { background-color: white; padding: 30px; border-radius: 8px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-.modal-content h2 { margin-bottom: 15px; }
-.modal-content p { margin-bottom: 25px; font-size: 1.1em; }
-.modal-actions { display: flex; justify-content: center; gap: 15px; }
-
-/* ===== レスポンシブ対応 ===== */
-@media (max-width: 1024px) { .main-grid { grid-template-columns: 1fr; } }
-@media (max-width: 768px) {
-  .top-bar { flex-direction: column; gap: 10px; }
-  .input-form { flex-direction: column; align-items: stretch; }
-  .input-form input[type="number"] { width: 100%; }
-  .priority-grid { grid-template-columns: 1fr; }
-  #timer-clock { font-size: 2.5rem; }
-  .modal-actions { flex-direction: column; }
-}
+  backgroundscript src="app.js"></script>
+</body>
+</html>
