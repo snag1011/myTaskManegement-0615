@@ -3,970 +3,1232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>時間管理＆集中力向上ダッシュボード</title>
+    <title>【最終完成版 Ver.3.0】インテリジェント業務管理アプリ</title>
+    <!-- Firebase SDKの読み込み -->
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore-compat.js"></script>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            padding: 20px;
-        }
-
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-        }
-
-        .card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 15px;
-            padding: 25px;
-            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        .header,
-        .data-management {
-            grid-column: 1 / -1;
-            text-align: center;
-        }
-        .header {
-            background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
-            color: white;
-            margin-bottom: 0;
-        }
-
-        .header h1 {
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-
-        .section-title {
-            color: #333;
-            font-size: 1.5em;
-            margin-bottom: 20px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            text-align: left;
-        }
-
-        .priority-matrix {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            margin-top: 20px;
-        }
-
-        .matrix-quadrant {
-            min-height: 120px;
-            border-radius: 10px;
-            padding: 15px;
-            position: relative;
-            transition: transform 0.2s;
-            text-align: left;
-        }
-
-        .matrix-quadrant:hover {
-            transform: translateY(-2px);
-        }
-
-        .urgent-important {
-            background: linear-gradient(135deg, #ff4757, #ff3838);
-            color: white;
-        }
-
-        .important-not-urgent {
-            background: linear-gradient(135deg, #2ed573, #1dd1a1);
-            color: white;
-        }
-
-        .urgent-not-important {
-            background: linear-gradient(135deg, #ffa502, #ff9500);
-            color: white;
-        }
-
-        .not-urgent-not-important {
-            background: linear-gradient(135deg, #747d8c, #57606f);
-            color: white;
-        }
-
-        .quadrant-title {
-            font-weight: bold;
-            font-size: 0.9em;
-            margin-bottom: 10px;
-        }
-
-        .task-input {
-            width: 100%;
-            padding: 8px;
-            border: none;
-            border-radius: 5px;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-        }
-
-        .task-input::placeholder {
-            color: rgba(255, 255, 255, 0.8);
-        }
-
-        .task-list {
-            list-style: none;
-            margin-top: 10px;
-        }
-
-        .task-item {
-            background: rgba(255, 255, 255, 0.2);
-            padding: 8px;
-            margin: 5px 0;
-            border-radius: 5px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.9em;
-        }
-
-        .delete-btn {
-            background: rgba(255, 255, 255, 0.3);
-            border: none;
-            color: white;
-            padding: 2px 8px;
-            border-radius: 3px;
-            cursor: pointer;
-        }
-
-        .pomodoro-timer {
-            text-align: center;
-        }
-
-        .timer-display {
-            font-size: 4em;
-            font-weight: bold;
-            color: #333;
-            margin: 20px 0;
-        }
-
-        .timer-controls {
-            display: flex;
-            gap: 10px;
-            justify-content: center;
-            margin: 20px 0;
-        }
-
-        .btn {
-            padding: 12px 24px;
-            border: none;
-            border-radius: 25px;
-            font-size: 1em;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-weight: bold;
-        }
-
-        .btn-primary {
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            color: white;
-        }
-
-        .btn-primary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-
-        .btn-secondary {
-            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
-            color: white;
-        }
-
-        .btn-secondary:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
-        }
-         .btn-warning {
-            background: linear-gradient(45deg, #f0ad4e, #ec971f);
-            color: white;
-        }
-        .btn-warning:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        .focus-mode {
-            text-align: center;
-        }
-
-        .focus-status {
-            font-size: 1.2em;
-            margin: 20px 0;
-            padding: 15px;
-            border-radius: 10px;
-            background: linear-gradient(45deg, #4ecdc4, #44a08d);
-            color: white;
-        }
-
-        .daily-goals {
-            margin-top: 20px;
-            text-align: left;
-        }
-
-        .goal-input {
-            width: 100%;
-            padding: 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            font-size: 1em;
-        }
-
-        .goal-list {
-            list-style: none;
-        }
-
-        .goal-item {
-            background: #f8f9fa;
-            padding: 12px;
-            margin: 8px 0;
-            border-radius: 8px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            border-left: 4px solid #667eea;
-        }
-
-        .goal-item.completed {
-            background: #d4edda;
-            text-decoration: line-through;
-            opacity: 0.7;
-            border-left-color: #28a745;
-        }
-
-        .checkbox {
-            margin-right: 10px;
-        }
-
-        .progress-bar {
-            width: 100%;
-            height: 10px;
-            background: #e9ecef;
-            border-radius: 5px;
-            margin: 15px 0;
-            overflow: hidden;
-        }
-
-        .progress-fill {
-            height: 100%;
-            background: linear-gradient(45deg, #667eea, #764ba2);
-            transition: width 0.3s;
-        }
-
-        .time-select,
-        input[type="date"].time-select {
-            padding: 8px 12px;
-            border: 2px solid #ddd;
-            border-radius: 8px;
-            font-size: 1em;
-            background: white;
-            cursor: pointer;
-            transition: border-color 0.3s;
-            color: #333;
-        }
-
-        .time-select:focus,
-        input[type="date"].time-select:focus {
-            outline: none;
-            border-color: #667eea;
-        }
-
-        .time-select:hover,
-        input[type="date"].time-select:hover {
-            border-color: #667eea;
-        }
-
-        .data-management-controls {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: center;
-            align-items: center;
-            gap: 20px;
-            text-align: left;
-        }
-        .data-management-controls > div {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-         .data-management-controls label {
-            font-weight: bold;
-            color: #333;
-        }
-        .data-management .section-title {
-            justify-content: center;
-        }
-
-        /* ★追加: 視覚的通知用のスタイル */
-        #visual-notification {
-            display: none; /* 初期状態は非表示 */
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.75); /* 半透明の黒背景 */
-            z-index: 1000; /* 他の要素より手前に表示 */
-            justify-content: center;
-            align-items: center;
-        }
-
-        #visual-notification-content {
-            background: linear-gradient(135deg, #ff7e5f, #feb47b); /* 暖色系で目立つように */
-            color: white;
-            padding: 30px 50px;
-            border-radius: 15px;
-            text-align: center;
-            font-size: 22px;
-            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-            max-width: 90%;
-        }
-
-        #visual-notification-content p {
-            margin-bottom: 25px;
-            font-weight: bold;
-            line-height: 1.5;
-        }
-        #visual-notification-content button {
-            padding: 10px 25px;
-            border: none;
-            border-radius: 20px;
-            background-color: rgba(255,255,255,0.8);
-            color: #333;
-            font-size: 16px;
-            cursor: pointer;
-            transition: background-color 0.2s;
-        }
-        #visual-notification-content button:hover {
-            background-color: white;
-        }
-
-        .visible {
-            display: flex !important; /* 表示するときは flex で中央揃え */
-        }
-
-        /* 点滅アニメーションの例 (オプション) */
-        @keyframes blink-alarm-bg {
-            0%, 100% { background-color: #ff7e5f; } /* グラデーションの開始色 */
-            50% { background-color: #feb47b; } /* グラデーションの終了色に近い明るい色 */
-        }
-        #visual-notification-content.blinking { /* 点滅させたい場合にこのクラスを付与 */
-             animation: blink-alarm-bg 1s infinite;
-        }
-
-
-        @media (max-width: 768px) {
-            .container {
-                grid-template-columns: 1fr;
-            }
-            .data-management-controls {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            .data-management-controls > div {
-                justify-content: center;
-            }
-            #visual-notification-content {
-                font-size: 18px;
-                padding: 20px 30px;
-            }
-            #visual-notification-content p {
-                margin-bottom: 20px;
-            }
-        }
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; background-color: #f0f2f5; color: #333; margin: 0; padding: 20px; line-height: 1.5; }
+        .container { max-width: 1600px; margin: 0 auto; }
+        .auth-bar { display: flex; justify-content: flex-end; align-items: center; gap: 15px; margin-bottom: 20px; }
+        .auth-bar button { padding: 8px 15px; border-radius: 6px; border: none; cursor: pointer; color: white; }
+        #login-btn { background-color: #4285F4; } #logout-btn { background-color: #d9534f; }
+        .main-content { display: none; }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 10px; }
+        h2 { font-size: 1.3em; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; margin-top: 15px; color: #34495e; }
+        h3 { font-size: 1.0em; font-weight: 600; margin-top: 0; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid; }
+        .main-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 25px; }
+        .planning-column, .execution-column { display: flex; flex-direction: column; gap: 25px; }
+        .panel { background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .date-selector-panel { text-align: center; margin-bottom: 20px; }
+        #main-date-picker { padding: 10px; font-size: 1.2em; border: 2px solid #3498db; border-radius: 8px; }
+        .input-form { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: center; }
+        .input-form input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1em; }
+        .input-form input[type="text"] { flex-grow: 1; }
+        .input-form input[type="number"] { width: 70px; text-align: center; }
+        .input-form button { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; color: white; transition: background-color 0.3s; }
+        #add-plan-btn { background-color: #3498db; }
+        #add-urgent-btn { background-color: #e74c3c; }
+        .task-list { list-style-type: none; padding: 10px; min-height: 60px; border: 2px dashed #e0e0e0; border-radius: 8px; transition: background-color 0.2s; }
+        .task-list.drag-over { background-color: #eaf5ff; }
+        .task-item { background-color: #ecf0f1; padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; cursor: grab; border-left: 5px solid #3498db; user-select: none; }
+        .task-item.dragging { opacity: 0.4; }
+        .task-item .task-content { flex-grow: 1; }
+        .task-item .task-text { font-weight: 500; word-break: break-all; }
+        .task-item .task-details { font-size: 0.85em; color: #7f8c8d; margin-left: 10px; white-space: nowrap; }
+        .task-item.urgent { border-left-color: #e74c3c; background-color: #fdeded; }
+        .delete-plan-btn { background: none; border: none; color: #c0392b; cursor: pointer; font-size: 1.5em; font-weight: bold; opacity: 0; transition: opacity 0.2s; padding: 0 8px; line-height: 1; }
+        .task-item:hover .delete-plan-btn { opacity: 0.6; }
+        .delete-plan-btn:hover { opacity: 1; }
+        .execution-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        #timer-clock { font-size: 2.5em; font-weight: bold; letter-spacing: 2px; }
+        #current-task-display { text-align: left; } #current-task-display p { margin: 0; font-size: 1.1em; }
+        .priority-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .priority-box { padding: 15px; border-radius: 8px; }
+        #box-a { background: #fff5f5; border: 1px solid #e57373; } #box-a h3 { color: #c62828; border-color: #ef9a9a; }
+        #box-b { background: #f1f8e9; border: 1px solid #aed581; } #box-b h3 { color: #558b2f; border-color: #c5e1a5; }
+        #box-c { background: #fffde7; border: 1px solid #ffd54f; } #box-c h3 { color: #f9a825; border-color: #ffe082; }
+        #box-d { background: #f5f5f5; border: 1px solid #e0e0e0; } #box-d h3 { color: #616161; border-color: #eee; }
+        .execution-controls { margin-top: 15px; display: flex; justify-content: center; gap: 10px; }
+        .execution-controls button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .daily-input { width: 10 color: #2c3e50; text-align: center; margin-bottom: 10px; }
+        h2 { font-size: 1.3em; border-bottom: 2px solid #e0e0e0; padding-bottom: 8px; margin-top: 15px; color: #34495e; }
+        h3 { font-size: 1.0em; font-weight: 600; margin-top: 0; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 1px solid; }
+        .main-grid { display: grid; grid-template-columns: 1fr 1.5fr; gap: 25px; }
+        .planning-column, .execution-column { display: flex; flex-direction: column; gap: 25px; }
+        .panel { background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .date-selector-panel { text-align: center; margin-bottom: 20px; }
+        #main-date-picker { padding: 10px; font-size: 1.2em; border: 2px solid #3498db; border-radius: 8px; }
+        .input-form { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: center; }
+        .input-form input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1em; }
+        .input-form input[type="text"] { flex-grow: 1; }
+        .input-form input[type="number"] { width: 70px; text-align: center; }
+        .input-form button { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; color: white; transition: background-color 0.3s; }
+        #add-plan-btn { background-color: #3498db; }
+        #add-urgent-btn { background-color: #e74c3c; }
+        .task-list { list-style-type: none; padding: 10px; min-height: 60px; border: 2px dashed #e0e0e0; border-radius: 8px; transition: background-color 0.2s; }
+        .task-list.drag-over { background-color: #eaf5ff; }
+        .task-item { background-color: #ecf0f1; padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; cursor: grab; border-left: 5px solid #3498db; user-select: none; }
+        .task-item.dragging { opacity: 0.4; }
+        .task-item .task-content { flex-grow: 1; }
+        .task-item .task-text { font-weight: 500; word-break: break-all; }
+        .task-item .task-details { font-size: 0.85em; color: #7f8c8d; margin-left: 10px; white-space: nowrap; }
+        .task-item.urgent { border-left-color: #e74c3c; background-color: #fdeded; }
+        .delete-plan-btn { background: none; border: none; color: #c0392b; cursor: pointer; font-size: 1.5em; font-weight: bold; opacity: 0; transition: opacity 0.2s; padding: 0 8px; line-height: 1; }
+        .task-item:hover .delete-plan-btn { opacity: 0.6; }
+        .delete-plan-btn:hover { opacity: 1; }
+        .execution-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+        #timer-clock { font-size: 2.5em; font-weight: bold; letter-spacing: 2px; }
+        #current-task-display { text-align: left; } #current-task-display p { margin: 0; font-size: 1.1em; }
+        .priority-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .priority-box { padding: 15px; border-radius: 8px; }
+        #box-a { background: #fff5f5; border: 1px solid #e57373; } #box-a h3 { color: #c62828; border-color: #ef9a9a; }
+        #box-b { background: #f1f8e9; border: 1px solid #aed581; } #box-b h3 { color: #558b2f; border-color: #c5e1a5; }
+        #box-c { background: #fffde7; border: 1px solid #ffd54f; } #box-c h3 { color: #f9a825; border-color: #ffe082; }
+        #box-d { background: #f5f5f5; border: 1px solid #e0e0e0; } #box-d h3 { color: #616161; border-color: #eee; }
+        .execution-controls { margin-top: 15px; display: flex; justify-content: center; gap: 10px; }
+        .execution-controls button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .daily-input { width: 100%; box-sizing: border-box; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .daily-panel button { background-color: #27ae60; width: 100%; padding: 8px; }
+        #実績-panel .task-item { cursor: default; }
+        .task-item.completed { background-color: #d4edda; border-left-color: #28a745; }
+        .task-item.canceled { background-color: #f8d7da; border-left-color: #dc3545; opacity: 0.8; }
+        .export-button, #delete-day-data-btn { width: 100%; padding: 12px; margin-top: 15px; font-size: 1em; border: none; border-radius: 8px; cursor: pointer; color: white; }
+        #export-plan-btn { background-color: #2980b9; } #export-実績-btn { background-color: #8e44ad; }
+        #delete-day-data-btn { background-color: #e74c3c; margin-top: 5px; }
+        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } .top-bar { justify-content: center; } }
     </style>
 </head>
 <body>
     <div class="container">
-        <div class="card header">
-            <h1>🎯 時間管理＆集中力向上ダッシュボード</h1>
-            <p>タスク優先順位付け + ポモドーロテクニック</p>
-        </div>
-
-        <div class="card data-management">
-            <h2 class="section-title">⚙️ データ管理</h2>
-            <div class="data-management-controls">
-                <div>
-                    <label for="work-date">作業日:</label>
-                    <input type="date" id="work-date" class="time-select">
-                </div>
-                <div>
-                    <button class="btn btn-primary" id="export-csv-btn">実績をCSVで出力</button>
-                    <button class="btn btn-warning" id="reset-all-btn" style="margin-left: 10px;">全データリセット</button>
-                    <!-- ★追加(任意): ブラウザ通知許可ボタンをここに置く場合
-                    <button class="btn btn-info" id="request-permission-btn" style="margin-left: 10px;">通知許可</button>
-                    -->
-                </div>
+        <div class="top-bar">
+            <div class="notification-bar">
+                <span id="notification-status"></span>
+                <button id="request-notification-btn" style="display: none;">デスクトップ通知を許可</button>
+            </div>
+            <div class="auth-bar">
+                <span id="user-info"></span>
+                <button id="login-btn">Googleアカウントでログイン</button>
+                <button id="logout-btn" style="display: none;">ログアウト</button>
             </div>
         </div>
-
-        <div class="card">
-            <h2 class="section-title">📊 アイゼンハワーマトリックス</h2>
-            <div class="priority-matrix">
-                <div class="matrix-quadrant urgent-important">
-                    <div class="quadrant-title">🔥 緊急 & 重要</div>
-                    <input type="text" class="task-input" placeholder="今すぐやるべきタスク" data-quadrant="urgent-important">
-                    <ul class="task-list" id="urgent-important-list"></ul>
-                </div>
-
-                <div class="matrix-quadrant important-not-urgent">
-                    <div class="quadrant-title">⭐ 重要 & 非緊急</div>
-                    <input type="text" class="task-input" placeholder="計画的に取り組むタスク" data-quadrant="important-not-urgent">
-                    <ul class="task-list" id="important-not-urgent-list"></ul>
-                </div>
-
-                <div class="matrix-quadrant urgent-not-important">
-                    <div class="quadrant-title">⚡ 緊急 & 非重要</div>
-                    <input type="text" class="task-input" placeholder="委譲できるタスク" data-quadrant="urgent-not-important">
-                    <ul class="task-list" id="urgent-not-important-list"></ul>
-                </div>
-
-                <div class="matrix-quadrant not-urgent-not-important">
-                    <div class="quadrant-title">❌ 非緊急 & 非重要</div>
-                    <input type="text" class="task-input" placeholder="削除できるタスク" data-quadrant="not-urgent-not-important">
-                    <ul class="task-list" id="not-urgent-not-important-list"></ul>
-                </div>
+        <div id="main-content" class="main-content">
+             <h1>🚀【最終完成版 Ver.2.2】業務管理アプリ</h1>
+             <div class="date-selector-panel">
+                <input type="date" id="main-date-picker">
             </div>
-        </div>
-
-        <div class="card pomodoro-timer">
-            <h2 class="section-title">🍅 ポモドーロタイマー</h2>
-            <div class="timer-settings" style="display: flex; justify-content: center; gap: 15px; margin-bottom: 20px;">
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">作業時間</label>
-                    <select id="work-time-select" class="time-select">
-                        <option value="15">15分</option>
-                        <option value="20">20分</option>
-                        <option value="25" selected>25分</option>
-                        <option value="30">30分</option>
-                        <option value="45">45分</option>
-                        <option value="60">60分</option>
-                        <option value="0.1">テスト(6秒)</option> <!-- ★追加: テスト用 -->
-                    </select>
+            <div class="main-grid">
+                <div class="planning-column">
+                    <div class="panel daily-panel">
+                        <h2>本日のフォーカス</h2>
+                        <label for="daily-goal"><strong>本日の目標</strong></label>
+                        <input type="text" id="daily-goal" class="daily-input" placeholder="今日達成したい最も重要なこと">
+                        <label for="daily-journal"><strong>本日のジャーナル</strong></label>
+                        <textarea id="daily-journal" class="daily-input" rows="4" placeholder="一日の終わりに振り返りを記録しよう"></textarea>
+                        <button id="save-daily-btn">目標とジャーナルを保存</button>
+                    </div>
+                    <div id="plan-panel" class="panel">
+                        <h2>計画タスク</h2>
+                        <div class="input-form">
+                            <input type="text" id="plan-task-input" placeholder="タスク名">
+                            <input type="number" id="plan-duration-input" value="30" min="1" title="予定時間(分)">
+                            <button id="add-plan-btn">計画に追加</button>
+                        </div>
+                        <ul id="plan-list" class="task-list"></ul>
+                        <button id="export-plan-btn" class="export-button">📋 計画をCSV出力</button>
+                        <button id="delete-day-data-btn" class="export-button">🗑️ この日の全データをリセット</button>
+                    </div>
+                    <div id="実績-panel" class="panel">
+                        <h2>実績</h2>
+                        <ul id="実績-list" class="task-list"></ul>
+                        <button id="export-実績-btn" class="export-button">📈 実績をCSV出力</button>
+                    </div>
                 </div>
-                <div>
-                    <label style="display: block; margin-bottom: 5px; font-weight: bold;">休憩時間</label>
-                    <select id="break-time-select" class="time-select">
-                        <option value="3">3分</option>
-                        <option value="5" selected>5分</option>
-                        <option value="10">10分</option>
-                        <option value="15">15分</option>
-                        <option value="0.05">テスト(3秒)</option> <!-- ★追加: テスト用 -->
-                    </select>
+                <div class="execution-column">
+                    <div id="execution-panel" class="panel">
+                        <h2>実行と分類</h2>
+                        <div class="execution-top">
+                            <div id="current-task-display"><p>実行タスクがありません</p></div>
+                            <div id="timer-clock">00:00</div>
+                        </div>
+                        <div class="execution-controls">
+                            <button id="start-btn" disabled>▶️ 開始/再開</button>
+                            <button id="pause-btn" disabled>⏸️ 一時停止</button>
+                            <button id="complete-btn" disabled>✅ 完了</button>
+                            <button id="cancel-btn" disabled>⏹️ 中止</button>
+                        </div>
+                        <hr style="margin: 20px 0; border: 1px solid #eee;">
+                        <div id="urgent-task-panel">
+                            <h3>割り込みタスク</h3>
+                            <div class="input-form">
+                                <input type="text" id="urgent-task-input" placeholder="緊急タスク名">
+                                <input type="number" id="urgent-duration-input" value="15" min="1">
+                                <button id="add-urgent-btn">最優先に追加</button>
+                            </div>
+                        </div>
+                        <div class="priority-grid">
+                            <div id="box-a" class="priority-box"><h3>🔥 緊急＆重要<br><small>(今すぐ取り組むべきタスク)</small></h3><ul id="box-a-list" class="task-list"></ul></div>
+                            <div id="box-b" class="priority-box"><h3>🌱 重要＆非緊急<br><small>(計画的に取り組むべきタスク)</small></h3><ul id="box-b-list" class="task-list"></ul></div>
+                            <div id="box-c" class="priority-box"><h3>⚡️ 緊急＆非重要<br><small>(移譲できるタスク)</small></h3><ul id="box-c-list" class="task-list"></ul></div>
+                            <div id="box-d" class="priority-box"><h3>🗑️ 非緊急 & 非重要<br><small>(削除できるタスク)</small></h3><ul id="box-d-list" class="task-list"></ul></div>
+                        </div>
+                    </div>
                 </div>
-            </div>
-            <div class="timer-display" id="timer-display">25:00</div>
-            <div class="timer-controls">
-                <button class="btn btn-primary" id="start-btn">開始</button>
-                <button class="btn btn-secondary" id="reset-btn">リセット</button>
-            </div>
-            <div class="focus-mode">
-                <div class="focus-status" id="focus-status">集中セッション準備完了</div>
-                <p id="timer-description">25分集中 → 5分休憩のサイクルで作業効率UP！</p>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2 class="section-title">🎯 今日の目標</h2>
-            <div class="daily-goals">
-                <input type="text" class="goal-input" id="goal-input" placeholder="今日達成したい目標を入力">
-                <div class="progress-bar">
-                    <div class="progress-fill" id="progress-fill" style="width: 0%"></div>
-                </div>
-                <ul class="goal-list" id="goal-list"></ul>
-            </div>
-        </div>
-
-        <div class="card">
-            <h2 class="section-title">💡 集中力向上のコツ</h2>
-            <div style="line-height: 1.6;">
-                <p><strong>🏠 在宅勤務時：</strong></p>
-                <ul style="margin: 10px 0 20px 20px;">
-                    <li>作業専用スペースを設ける</li>
-                    <li>家族に作業時間を共有</li>
-                    <li>適度な背景音楽を活用</li>
-                </ul>
-
-                <p><strong>🏢 オフィス勤務時：</strong></p>
-                <ul style="margin: 10px 0 20px 20px;">
-                    <li>ノイズキャンセリングイヤホン使用</li>
-                    <li>会議の合間に5分休憩</li>
-                    <li>同僚とのコミュニケーション時間を設定</li>
-                </ul>
-
-                <p><strong>🌟 共通のコツ：</strong></p>
-                <ul style="margin: 10px 0 20px 20px;">
-                    <li>スマホを別の場所に置く</li>
-                    <li>水分補給を忘れずに</li>
-                    <li>1時間に1回は立ち上がる</li>
-                </ul>
             </div>
         </div>
     </div>
 
-    <!-- ★追加: 視覚的通知用要素 -->
-    <div id="visual-notification">
-        <div id="visual-notification-content">
-            <p id="visual-notification-message">時間です！</p>
-            <button id="close-visual-notification">閉じる</button>
-        </div>
-    </div>
+<script>
+    // --- Firebase初期化 ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
+        authDomain: "my-private-task-manegment.firebaseapp.com",
+        projectId: "my-private-task-manegment",
+        storageBucket: "my-private-task-manegment.appspot.com",
+        messagingSenderId: "272952129117",
+        appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
 
-    <!-- ★追加: 音声通知用 -->
-    <!-- 【重要】src属性に音声ファイルのパスを指定するか、JSで設定してください。 -->
-    <audio id="notification-sound" preload="auto"></audio>
-
-    <script>
-        // グローバル変数
-        let timer = null;
-        let workTime = 25 * 60;
-        let breakTime = 5 * 60;
-        let timeLeft = workTime;
-        let isRunning = false;
-        let isWorkSession = true;
-        let sessionEndTime = null;
-        let pomodoroLog = [];
-
-        // DOM要素を取得
-        const timerDisplay = document.getElementById('timer-display');
+    document.addEventListener('DOMContentLoaded', () => {
+        let tasks = [];
+        let taskCollection, dailyDataCollection;
+        let unsubscribeTasks, unsubscribeDaily;
+        let timerInterval = null;
+        
+        const mainDatePicker = document.getElementById('main-date-picker');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userInfo = document.getElementById('user-info');
+        const mainContent = document.getElementById('main-content');
+        const notificationStatus = document.getElementById('notification-status');
+        const requestNotificationBtn = document.getElementById('request-notification-btn');
+        const dailyGoalInput = document.getElementById('daily-goal');
+        const dailyJournalInput = document.getElementById('daily-journal');
+        const saveDailyBtn = document.getElementById('save-daily-btn');
+        const planTaskInput = document.getElementById('plan-task-input');
+        const planDurationInput = document.getElementById('plan-duration-input');
+        const addPlanBtn = document.getElementById('add-plan-btn');
+        const allTaskLists = document.querySelectorAll('.task-list');
+        const urgentTaskInput = document.getElementById('urgent-task-input');
+        const urgentDurationInput = document.getElementById('urgent-duration-input');
+        const addUrgentBtn = document.getElementById('add-urgent-btn');
+        const currentTaskDisplay = document.getElementById('current-task-display');
+        const timerClock = document.getElementById('timer-clock');
         const startBtn = document.getElementById('start-btn');
-        const resetBtn = document.getElementById('reset-btn');
-        const focusStatus = document.getElementById('focus-status');
-        const workTimeSelect = document.getElementById('work-time-select');
-        const breakTimeSelect = document.getElementById('break-time-select');
-        const timerDescription = document.getElementById('timer-description');
-        const goalInput = document.getElementById('goal-input');
-        const goalList = document.getElementById('goal-list');
-        const progressFill = document.getElementById('progress-fill');
-        const workDateInput = document.getElementById('work-date');
-        const exportCsvBtn = document.getElementById('export-csv-btn');
-        const resetAllBtn = document.getElementById('reset-all-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const completeBtn = document.getElementById('complete-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const exportPlanBtn = document.getElementById('export-plan-btn');
+        const export実績Btn = document.getElementById('export-実績-btn');
+        const deleteDayDataBtn = document.getElementById('delete-day-data-btn');
+        const planList = document.getElementById('plan-list');
 
-        // ★追加: 通知関連のDOM要素
-        const visualNotificationElement = document.getElementById('visual-notification');
-        const visualNotificationMessageElement = document.getElementById('visual-notification-message');
-        const closeVisualNotificationButton = document.getElementById('close-visual-notification');
-        const notificationSound = document.getElementById('notification-sound');
-        // const requestPermissionBtn = document.getElementById('request-permission-btn'); // もし専用ボタンを設置する場合
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                userInfo.textContent = `${user.displayName} さん`;
+                loginBtn.style.display = 'none'; logoutBtn.style.display = 'block';
+                mainContent.style.display = 'block';
+                taskCollection = db.collection('users').doc(user.uid).collection('tasks');
+                dailyDataCollection = db.collection('users').doc(user.uid).collection('daily_data');
+                loadAllDataForDate(mainDatePicker.value);
+                checkNotificationPermission();
+            } else {
+                userInfo.textContent = '';
+                loginBtn.style.display = 'block'; logoutBtn.style.display = 'none';
+                mainContent.style.display = 'none';
+                if (unsubscribeTasks) unsubscribeTasks();
+                if (unsubscribeDaily) unsubscribeDaily();
+                tasks = [];
+                render();
+            }
+        });
 
-        // ★追加: 音声ファイルの設定 (適宜変更してください)
-        // 例: notificationSound.src = 'sounds/alarm.mp3';
-        // テスト用にフリーの音源を指定
-        notificationSound.src = 'https://actions.google.com/sounds/v1/alarms/alarm_clock.ogg';
+        loginBtn.addEventListener('click', () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()));
+        logoutBtn.addEventListener('click', () => auth.signOut());
 
-
-        // アイゼンハワーマトリックス機能
-        document.addEventListener('DOMContentLoaded', function() {
-            const taskInputs = document.querySelectorAll('.task-input');
-
-            taskInputs.forEach(input => {
-                input.addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter' && this.value.trim()) {
-                        addTaskToMatrix(this.value.trim(), this.dataset.quadrant);
-                        this.value = '';
-                    }
-                });
+        function loadAllDataForDate(dateStr) {
+            if (!auth.currentUser || !dateStr) return;
+            if (unsubscribeTasks) unsubscribeTasks();
+            unsubscribeTasks = taskCollection.where("plannedDate", "==", dateStr).orderBy("order").onSnapshot(snapshot => {
+                tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                render();
             });
-
-            if (workDateInput) {
-                workDateInput.valueAsDate = new Date();
-            }
+            if (unsubscribeDaily) unsubscribeDaily();
+            unsubscribeDaily = dailyDataCollection.doc(dateStr).onSnapshot(doc => {
+                const data = doc.exists ? doc.data() : { goal: '', journal: '' };
+                dailyGoalInput.value = data.goal || '';
+                dailyJournalInput.value = data.journal || '';
+            });
+        }
+        
+        saveDailyBtn.addEventListener('click', async () => {
+            await dailyDataCollection.doc(mainDatePicker.value).set({ goal: dailyGoalInput.value, journal: dailyJournalInput.value }, { merge: true });
+            alert('保存しました！');
         });
 
-        function addTaskToMatrix(taskText, quadrant) {
-            const list = document.getElementById(quadrant + '-list');
-            if (!list) return;
-            const li = document.createElement('li');
-            li.className = 'task-item';
-            li.innerHTML = `
-                <span>${taskText}</span>
-                <button class="delete-btn" onclick="this.parentElement.remove()">×</button>
-            `;
-            list.appendChild(li);
-        }
-
-        // 時間設定の変更を監視
-        workTimeSelect.addEventListener('change', function() {
-            workTime = parseFloat(this.value) * 60; // parseFloatで小数点対応
-            if (isWorkSession && !isRunning) {
-                timeLeft = workTime;
-                updateDisplay();
-            }
-            updateDescription();
+        deleteDayDataBtn.addEventListener('click', async () => {
+            const dateToDelete = mainDatePicker.value;
+            if (!confirm(`${dateToDelete}のすべてのタスクと目標・ジャーナルを削除します。この操作は元に戻せません。よろしいですか？`)) return;
+            const batch = db.batch();
+            const tasksSnapshot = await taskCollection.where("plannedDate", "==", dateToDelete).get();
+            tasksSnapshot.forEach(doc => batch.delete(doc.ref));
+            const dailyDataRef = dailyDataCollection.doc(dateToDelete);
+            batch.delete(dailyDataRef);
+            await batch.commit();
+            alert(`${dateToDelete}のデータをすべて削除しました。`);
         });
-
-        breakTimeSelect.addEventListener('change', function() {
-            breakTime = parseFloat(this.value) * 60; // parseFloatで小数点対応
-            if (!isWorkSession && !isRunning) {
-                timeLeft = breakTime;
-                updateDisplay();
-            }
-            updateDescription();
-        });
-
-        // --- ★追加: 通知機能 ---
-        /**
-         * ブラウザ通知の許可を求める
-         */
-        async function requestNotificationPermission() {
-            if (!("Notification" in window)) {
-                console.warn("このブラウザはデスクトップ通知をサポートしていません。");
-                return false;
-            }
-            if (Notification.permission === "granted") {
-                return true;
-            }
-            if (Notification.permission !== "denied") {
-                const permission = await Notification.requestPermission();
-                if (permission === "granted") {
-                    return true;
-                } else {
-                    console.warn("通知が許可されませんでした。");
-                    return false;
-                }
-            } else {
-                console.warn("通知がブロックされています。ブラウザの設定で通知を許可してください。");
-                return false;
-            }
-        }
-
-        /**
-         * ブラウザ通知を表示する
-         * @param {string} title 通知のタイトル
-         * @param {string} body 通知の本文
-         */
-        function showBrowserNotification(title, body) {
-            if (Notification.permission === "granted") {
-                const notification = new Notification(title, {
-                    body: body,
-                    icon: 'https://cdn-icons-png.flaticon.com/512/1005/1005110.png' // 例: トマトアイコン
-                });
-                notification.onclick = () => {
-                    window.focus(); // 通知クリックでウィンドウをフォーカス
-                };
-            } else {
-                console.log("ブラウザ通知の許可がないため表示できませんでした。");
-            }
-        }
-
-        /**
-         * 音声通知を再生する
-         */
-        function playSoundNotification() {
-            if (notificationSound.src && notificationSound.src !== window.location.href) {
-                notificationSound.currentTime = 0;
-                notificationSound.play().catch(error => {
-                    console.error("音声の再生に失敗しました:", error);
-                    // ユーザー操作なしの自動再生制限に引っかかった可能性
-                    // alert("音声の再生に失敗しました。ブラウザの設定やミュート状態を確認してください。");
-                });
-            } else {
-                console.warn("通知音の音声ファイルが設定されていません。");
-            }
-        }
-
-        /**
-         * 視覚的通知を表示する
-         * @param {string} message 表示するメッセージ (HTML可)
-         * @param {boolean} blink 点滅させるか
-         */
-        function showVisualNotification(message, blink = true) {
-            visualNotificationMessageElement.innerHTML = message;
-            visualNotificationElement.classList.add('visible');
-            if (blink) {
-                visualNotificationElement.querySelector('#visual-notification-content').classList.add('blinking');
-            }
-        }
-
-        /**
-         * 視覚的通知を非表示にする
-         */
-        function hideVisualNotification() {
-            visualNotificationElement.classList.remove('visible');
-            visualNotificationElement.querySelector('#visual-notification-content').classList.remove('blinking');
-        }
-        // --- ★追加ここまで: 通知機能 ---
-
-
-        // タイマー機能
-        function updateTimer() {
-            if (sessionEndTime === null) {
-                if (timer) clearInterval(timer);
-                timer = null;
+        
+        const alarmSound = new Audio('data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWcgQmFuZyBzb3VuZCBmcm9tIFNvdW5kQmlibGUuY29tIC8gUmVjb3JkZWQgYnkgTWlrZSBLb2VuaWcAAAAAADh2//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AAAA4doxGQV9TTQkAAQADADGAlYMAAZYCAwMhJCMjGxsdBAcIAgYGBgUDAwQEBAQEBAMDBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUEu//uQxAADACyATUMMMAYAAAQNdAAAFgACAAAFhQAA//uQxAABASxATwMMMAYAAAQI0AAAEgACAAAEhQAA//uQxAAAByxAUQMMMAYAAAPt0AAAIgACAAAHhQAA//uQxAAAECxAUgMMMAYAAANV0AAAJgACAAAFhQAA//uQxAAAICxAUwMMMAYAAAIx0AAAGgACAAAGhQAA//uQxAAADyxAVQMMMAYAAAFN0AAAFgACAAA5hQAA//uQxAAAESxAVgMMMAYAAAIV0AAADgACAAAEhQAA//uQxAAAISxAVwMMMAYAAAGR0AAACgACAAAFhQAA//uQxAAADyxAWQMMMAYAAAD90AAAIAACAAAHhQAA//uQxAAAESxAWgMMMAYAAAFN0AAAEgACAAAFhQAA//uQxAAAIixAWwMMMAYAAACF0AAACgACAAAGhQAA//uQxAAADyxAXQMMMAYAAAEV0AAAGgACAAAEhQAA//uQxAAEECxAXgMMMAYAAAGl0AAAEgACAAAGhQAA//uQxAAEICxAXwMMMAYAAAD50AAAIgACAAAGhQAA//u-');
+        
+        function showNotification(title, body) {
+            alarmSound.play();
+            if (!("Notification" in window) || Notification.permission !== 'granted') {
+                alert(`${title}\n${body}`);
                 return;
             }
+            new Notification(title, { body });
+        }
 
-            const now = Date.now();
-            const remainingMilliseconds = sessionEndTime - now;
-
-            if (remainingMilliseconds <= 0) {
-                timeLeft = 0;
-                updateDisplay();
-
-                clearInterval(timer);
-                timer = null;
-                isRunning = false;
-                startBtn.textContent = '開始';
-
-                const completedDuration = isWorkSession ? workTime : breakTime;
-                addPomodoroLog(isWorkSession ? 'work' : 'break', completedDuration);
-
-                // ★変更: 通知処理
-                if (isWorkSession) {
-                    const message = '🎉 集中セッション完了！<br>休憩時間です';
-                    focusStatus.textContent = '🎉 集中セッション完了！休憩時間です';
-                    focusStatus.style.background = 'linear-gradient(45deg, #4ecdc4, #44a08d)';
-                    isWorkSession = false;
-                    timeLeft = breakTime;
-                    // alert('集中セッション完了！休憩時間です'); // 元のalertはコメントアウト
-                    showBrowserNotification("集中セッション完了！", "お疲れ様でした。休憩を取りましょう。");
-                    playSoundNotification();
-                    showVisualNotification(message);
-                } else {
-                    const message = '✨ 休憩完了！<br>次の集中セッションの準備をしましょう';
-                    focusStatus.textContent = '✨ 休憩完了！次の集中セッションの準備をしましょう';
-                    focusStatus.style.background = 'linear-gradient(45deg, #667eea, #764ba2)';
-                    isWorkSession = true;
-                    timeLeft = workTime;
-                    // alert('休憩終了！集中セッションを開始しましょう'); // 元のalertはコメントアウト
-                    showBrowserNotification("休憩終了！", "集中セッションを再開しましょう。");
-                    playSoundNotification();
-                    showVisualNotification(message);
-                }
-
-                sessionEndTime = null;
-                updateDisplay();
+        async function addTask(isUrgent = false) {
+            let text, duration, taskDate, location, status, order;
+            taskDate = mainDatePicker.value;
+            if (isUrgent) {
+                text = urgentTaskInput.value.trim();
+                duration = parseInt(urgentDurationInput.value);
+                location = 'box-a-list'; status = 'ready'; order = -1; 
             } else {
-                timeLeft = Math.round(remainingMilliseconds / 1000);
-                updateDisplay();
+                text = planTaskInput.value.trim();
+                duration = parseInt(planDurationInput.value);
+                location = 'plan-list'; status = 'planned';
+                order = tasks.filter(t => t.location === location && t.plannedDate === taskDate).length;
             }
+            if (!text || !duration || duration <= 0 || !taskDate) {
+                alert('タスク名、0より大きい予定時間、実施予定日をすべて正しく入力してください。'); return;
+            }
+            const newTaskData = { text, plannedDuration: duration, status, location, plannedDate: taskDate, actualDate: null, isUrgent, order, createdAt: firebase.firestore.FieldValue.serverTimestamp(), workTime: 0, breakTime: 0, initialWorkTime: 0 };
+            await taskCollection.add(newTaskData);
+            if (isUrgent) urgentTaskInput.value = ''; else planTaskInput.value = '';
         }
 
-        function updateDisplay() {
-            const minutes = Math.floor(timeLeft / 60);
-            const seconds = timeLeft % 60;
-            const timeString = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
-            timerDisplay.textContent = timeString;
-            if (isRunning || timeLeft < (isWorkSession ? workTime : breakTime)) {
-                 document.title = `${timeString} - ${isWorkSession ? "集中" : "休憩"} | 時間管理ダッシュボード`;
+        function render() {
+            const sortedTasks = sortTasksForRender();
+            allTaskLists. flex-direction: column; gap: 25px; }
+        .panel { background-color: #ffffff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .date-selector-panel { text-align: center; margin-bottom: 20px; }
+        #main-date-picker { padding: 10px; font-size: 1.2em; border: 2px solid #3498db; border-radius: 8px; }
+        .input-form { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 15px; align-items: center; }
+        .input-form input { padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 1em; }
+        .input-form input[type="text"] { flex-grow: 1; }
+        .input-form input[type="number"] { width: 70px; text-align: center; }
+        .input-form button { padding: 10px 15px; border: none; border-radius: 6px; cursor: pointer; color: white; transition: background-color 0.3s; }
+        #add-plan-btn { background-color: #3498db; }
+        #add-urgent-btn { background-color: #e74c3c; }
+        .task-list { list-style-type: none; padding: 10px; min-height: 60px; border: 2px dashed #e0e0e0; border-radius: 8px; transition: background-color 0.2s; }
+        .task-list.drag-over { background-color: #eaf5ff; }
+        .task-item { background-color: #ecf0f1; padding: 10px 15px; margin-bottom: 8px; border-radius: 6px; display: flex; align-items: center; justify-content: space-between; cursor: grab; border-left: 5px solid #3498db; user-select: none; }
+        .task-item.dragging { opacity: 0.4; }
+        .task-item .task-content { flex-grow: 1; }
+        .task-item .task-text { font-weight: 500; word-break: break-all; }
+        .task-item .task-details { font-size: 0.85em; color: #7f8c8d; margin-left: 10px; white-space: nowrap; }
+        .task-item.urgent { border-left-color: #e74c3c; background-color: #fdeded; }
+        .delete-plan-btn { background: none; border: none; color: #c0392b; cursor: pointer; font-size: 1.5em; font-weight: bold; opacity: 0; transition: opacity 0.2s; padding: 0 8px; line-height: 1; }
+        .task-item:hover .delete-plan-btn { opacity: 0.6; }
+        .delete-plan-btn:hover { opacity: 1; }
+        .execution-top { display: flex; align-items: center; justify-content: space-between; gap: 20px; background: #2c3e50; color: white; padding: 15px; border-radius: 8px; margin-bottom: 15px; transition: background-color 0.5s; }
+        #timer-clock { font-size: 2.5em; font-weight: bold; letter-spacing: 2px; }
+        #current-task-display { text-align: left; } #current-task-display p { margin: 0; font-size: 1.1em; }
+        .priority-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        .priority-box { padding: 15px; border-radius: 8px; }
+        #box-a { background: #fff5f5; border: 1px solid #e57373; } #box-a h3 { color: #c62828; border-color: #ef9a9a; }
+        #box-b { background: #f1f8e9; border: 1px solid #aed581; } #box-b h3 { color: #558b2f; border-color: #c5e1a5; }
+        #box-c { background: #fffde7; border: 1px solid #ffd54f; } #box-c h3 { color: #f9a825; border-color: #ffe082; }
+        #box-d { background: #f5f5f5; border: 1px solid #e0e0e0; } #box-d h3 { color: #616161; border-color: #eee; }
+        .execution-controls { margin-top: 15px; display: flex; justify-content: center; gap: 10px; }
+        .execution-controls button:disabled { background-color: #bdc3c7; cursor: not-allowed; }
+        .daily-input { width: 100%; box-sizing: border-box; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .daily-panel button { background-color: #27ae60; width: 100%; padding: 8px; }
+        #実績-panel .task-item { cursor: default; }
+        .task-item.completed { background-color: #d4edda; border-left-color: #28a745; }
+        .task-item.canceled { background-color: #f8d7da; border-left-color: #dc3545; opacity: 0.8; }
+        .export-button, #delete-day-data-btn { width: 100%; padding: 12px; margin-top: 15px; font-size: 1em; border: none; border-radius: 8px; cursor: pointer; color: white; }
+        #export-plan-btn { background-color: #2980b9; } #export-実績-btn { background-color: #8e44ad; }
+        #delete-day-data-btn { background-color: #e74c3c; margin-top: 5px; }
+        .timer-flashing { animation: flash-bg 1s infinite; }
+        @keyframes flash-bg { 50% { background-color: #e74c3c; } }
+        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="auth-bar">
+            <span id="user-info"></span>
+            <button id="login-btn">Googleアカウントでログイン</button>
+            <button id="logout-btn" style="display: none;">ログアウト</button>
+        </div>
+        <div id="main-content" class="main-content">
+             <h1>🚀【最終完成版 Ver.2.2】業務管理アプリ</h1>
+             <div class="date-selector-panel">
+                <input type="date" id="main-date-picker">
+            </div>
+            <div class="main-grid">
+                <div class="planning-column">
+                    <div class="panel daily-panel">
+                        <h2>本日のフォーカス</h2>
+                        <label for="daily-goal"><strong>本日の目標</strong></label>
+                        <input type="text" id="daily-goal" class="daily-input" placeholder="今日達成したい最も重要なこと">
+                        <label for="daily-journal"><strong>本日のジャーナル</strong></label>
+                        <textarea id="daily-journal" class="daily-input" rows="4" placeholder="一日の終わりに振り返りを記録しよう"></textarea>
+                        <button id="save-daily-btn">目標とジャーナルを保存</button>
+                    </div>
+                    <div id="plan-panel" class="panel">
+                        <h2>計画タスク</h2>
+                        <div class="input-form">
+                            <input type="text" id="plan-task-input" placeholder="タスク名">
+                            <input type="number" id="plan-duration-input" value="30" min="1" title="予定時間(分)">
+                            <button id="add-plan-btn">計画に追加</button>
+                        </div>
+                        <ul id="plan-list" class="task-list"></ul>
+                        <button id="export-plan-btn" class="export-button">📋 計画をCSV出力</button>
+                        <button id="delete-day-data-btn" class="export-button">🗑️ この日の全データをリセット</button>
+                    </div>
+                    <div id="実績-panel" class="panel">
+                        <h2>実績</h2>
+                        <ul id="実績-list" class="task-list"></ul>
+                        <button id="export-実績-btn" class="export-button">📈 実績をCSV出力</button>
+                    </div>
+                </div>
+                <div class="execution-column">
+                    <div id="execution-panel" class="panel">
+                        <h2>実行と分類</h2>
+                        <div class="execution-top">
+                            <div id="current-task-display"><p>実行タスクがありません</p></div>
+                            <div id="timer-clock">00:00</div>
+                        </div>
+                        <div class="execution-controls">
+                            <button id="start-btn" disabled>▶️ 開始/再開</button>
+                            <button id="pause-btn" disabled>⏸️ 一時停止</button>
+                            <button id="complete-btn" disabled>✅ 完了</button>
+                            <button id="cancel-btn" disabled>⏹️ 中止</button>
+                        </div>
+                        <hr style="margin: 20px 0; border: 1px solid #eee;">
+                        <div id="urgent-task-panel">
+                            <h3>割り込みタスク</h3>
+                            <div class="input-form">
+                                <input type="text" id="urgent-task-input" placeholder="緊急タスク名">
+                                <input type="number" id="urgent-duration-input" value="15" min="1">
+                                <button id="add-urgent-btn">最優先に追加</button>
+                            </div>
+                        </div>
+                        <div class="priority-grid">
+                            <div id="box-a" class="priority-box"><h3>🔥 緊急＆重要<br><small>(今すぐ取り組むべきタスク)</small></h3><ul id="box-a-list" class="task-list"></ul></div>
+                            <div id="box-b" class="priority-box"><h3>🌱 重要＆非緊急<br><small>(計画的に取り組むべきタスク)</small></h3><ul id="box-b-list" class="task-list"></ul></div>
+                            <div id="box-c" class="priority-box"><h3>⚡️ 緊急＆非重要<br><small>(移譲できるタスク)</small></h3><ul id="box-c-list" class="task-list"></ul></div>
+                            <div id="box-d" class="priority-box"><h3>🗑️ 非緊急 & 非重要<br><small>(削除できるタスク)</small></h3><ul id="box-d-list" class="task-list"></ul></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- Firebase初期化 ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
+        authDomain: "my-private-task-manegment.firebaseapp.com",
+        projectId: "my-private-task-manegment",
+        storageBucket: "my-private-task-manegment.appspot.com",
+        messagingSenderId: "272952129117",
+        appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        let tasks = [];
+        let taskCollection;
+        let dailyDataCollection;
+        let unsubscribeTasks, unsubscribeDaily;
+        let timerInterval = null;
+        let notificationInterval = null; // ★通知用のインターバルID
+        
+        const mainDatePicker = document.getElementById('main-date-picker');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userInfo = document.getElementById('user-info');
+        const mainContent = document.getElementById('main-content');
+        const dailyGoalInput = document.getElementById('daily-goal');
+        const dailyJournalInput = document.getElementById('daily-journal');
+        const saveDailyBtn = document.getElementById('save-daily-btn');
+        const planTaskInput = document.getElementById('plan-task-input');
+        const planDurationInput = document.getElementById('plan-duration-input');
+        const addPlanBtn = document.getElementById('add-plan-btn');
+        const allTaskLists = document.querySelectorAll('.task-list');
+        const urgentTaskInput = document.getElementById('urgent-task-input');
+        const urgentDurationInput = document.getElementById('urgent-duration-input');
+        const addUrgentBtn = document.getElementById('add-urgent-btn');
+        const executionTop = document.querySelector('.execution-top');
+        const currentTaskDisplay = document.getElementById('current-task-display');
+        const timerClock = document.getElementById('timer-clock');
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const completeBtn = document.getElementById('complete-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const exportPlanBtn = document.getElementById('export-plan-btn');
+        const export実績Btn = document.getElementById('export-実績-btn');
+        const deleteDayDataBtn = document.getElementById('delete-day-data-btn');
+        const planList = document.getElementById('plan-list');
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                userInfo.textContent = `${user.displayName} さん`;
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+                mainContent.style.display = 'block';
+                taskCollection = db.collection('users').doc(user.uid).collection('tasks');
+                dailyDataCollection = db.collection('users').doc(user.uid).collection('daily_data');
+                loadAllDataForDate(mainDatePicker.value);
             } else {
-                 document.title = "時間管理＆集中力向上ダッシュボード";
-            }
-        }
-
-        function updateDescription() {
-            const workMinutes = Math.floor(workTime / 60);
-            const breakMinutes = Math.floor(breakTime / 60);
-            timerDescription.textContent = `${workMinutes}分集中 → ${breakMinutes}分休憩のサイクルで作業効率UP！`;
-        }
-
-        function startTimer() {
-            if (!isRunning) {
-                // ★追加: タイマースタート時に通知許可を求める
-                requestNotificationPermission().then(granted => {
-                    if (granted) {
-                        console.log("ブラウザ通知が許可されました。");
-                    } else {
-                        console.log("ブラウザ通知は許可されませんでした。");
-                    }
-                    // 通知許可状態に関わらずタイマーは開始
-                    // ★追加: 音声再生の準備 (ユーザーインタラクション起因にする)
-                    if (notificationSound.src && notificationSound.src !== window.location.href) {
-                        notificationSound.load(); // 念のためロード
-                    }
-
-                    isRunning = true;
-                    startBtn.textContent = '一時停止';
-                    focusStatus.textContent = isWorkSession ? '🔥 集中セッション中！' : '☕ 休憩中...';
-                    focusStatus.style.background = isWorkSession ?
-                        'linear-gradient(45deg, #ff6b6b, #ee5a52)' :
-                        'linear-gradient(45deg, #4ecdc4, #44a08d)';
-
-                    sessionEndTime = Date.now() + timeLeft * 1000;
-
-                    if(timer) clearInterval(timer);
-                    timer = setInterval(updateTimer, 1000);
-                    updateTimer();
-                });
-
-            } else {
-                clearInterval(timer);
-                timer = null;
-                isRunning = false;
-                startBtn.textContent = '開始';
-                focusStatus.textContent = '⏸️ タイマー一時停止中';
-                focusStatus.style.background = 'linear-gradient(45deg, #747d8c, #57606f)';
-            }
-        }
-
-        function resetPomodoroTimer() {
-            clearInterval(timer);
-            timer = null;
-            isRunning = false;
-            isWorkSession = true;
-            timeLeft = workTime;
-            sessionEndTime = null;
-            startBtn.textContent = '開始';
-            focusStatus.textContent = '集中セッション準備完了';
-            focusStatus.style.background = 'linear-gradient(45deg, #4ecdc4, #44a08d)';
-            updateDisplay();
-            document.title = "時間管理＆集中力向上ダッシュボード";
-            hideVisualNotification(); // ★追加: リセット時に視覚通知も消す
-        }
-
-        // イベントリスナー
-        startBtn.addEventListener('click', startTimer);
-        resetBtn.addEventListener('click', resetPomodoroTimer);
-        closeVisualNotificationButton.addEventListener('click', hideVisualNotification); // ★追加
-
-        // もし専用の通知許可ボタンを設置した場合のリスナー
-        // if (requestPermissionBtn) {
-        //     requestPermissionBtn.addEventListener('click', () => {
-        //         requestNotificationPermission().then(granted => {
-        //             if (granted) alert("ブラウザ通知が許可されました。");
-        //         });
-        //     });
-        // }
-
-
-        // 今日の目標機能
-        goalInput.addEventListener('keypress', function(e) {
-            if (e.key === 'Enter' && this.value.trim()) {
-                addGoal(this.value.trim());
-                this.value = '';
+                userInfo.textContent = '';
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+                mainContent.style.display = 'none';
+                if (unsubscribeTasks) unsubscribeTasks();
+                if (unsubscribeDaily) unsubscribeDaily();
+                tasks = [];
+                render();
             }
         });
 
-        function addGoal(goalText) {
-            const li = document.createElement('li');
-            li.className = 'goal-item';
-            li.innerHTML = `
-                <div>
-                    <input type="checkbox" class="checkbox" onchange="toggleGoalCompletion(this)">
-                    <span>${goalText}</span>
-                </div>
-                <button class="delete-btn" onclick="removeGoalItem(this)" style="color: #666;">×</button>
-            `;
-            goalList.appendChild(li);
-            updateProgress();
-        }
+        loginBtn.addEventListener('click', () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()));
+        logoutBtn.addEventListener('click', () => auth.signOut());
 
-        window.toggleGoalCompletion = function(checkbox) {
-            const goalItem = checkbox.closest('.goal-item');
-            if (checkbox.checked) {
-                goalItem.classList.add('completed');
-            } else {
-                goalItem.classList.remove('completed');
-            }
-            updateProgress();
-        }
-
-        window.removeGoalItem = function(button) {
-            button.parentElement.remove();
-            updateProgress();
-        }
-
-        function updateProgress() {
-            const totalGoals = goalList.children.length;
-            const completedGoals = goalList.querySelectorAll('.completed').length;
-            const progress = totalGoals > 0 ? (completedGoals / totalGoals) * 100 : 0;
-            progressFill.style.width = progress + '%';
-        }
-
-        // ポモドーロログ記録機能
-        function addPomodoroLog(type, durationInSeconds) {
-            pomodoroLog.push({
-                type: type,
-                duration: durationInSeconds,
-                completedAt: new Date()
+        function loadAllDataForDate(dateStr) {
+            if (!auth.currentUser || !dateStr) return;
+            if (unsubscribeTasks) unsubscribeTasks();
+            unsubscribeTasks = taskCollection.where("plannedDate", "==", dateStr).orderBy("order").onSnapshot(snapshot => {
+                tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                render();
+            });
+            if (unsubscribeDaily) unsubscribeDaily();
+            unsubscribeDaily = dailyDataCollection.doc(dateStr).onSnapshot(doc => {
+                const data = doc.exists ? doc.data() : { goal: '', journal: '' };
+                dailyGoalInput.value = data.goal || '';
+                dailyJournalInput.value = data.journal || '';
             });
         }
-
-        // 全データリセット機能
-        resetAllBtn.addEventListener('click', function() {
-            if (confirm('すべてのタスク、目標、ポモドーロログをリセットしますか？この操作は元に戻せません。')) {
-                document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
-                goalList.innerHTML = '';
-                updateProgress();
-                resetPomodoroTimer();
-                pomodoroLog = [];
-                if (workDateInput) {
-                     workDateInput.valueAsDate = new Date();
-                }
-                alert('すべてのデータがリセットされました。');
-            }
+        
+        saveDailyBtn.addEventListener('click', async () => {
+            await dailyDataCollection.doc(mainDatePicker.value).set({ goal: dailyGoalInput.value, journal: dailyJournalInput.value }, { merge: true });
+            alert('保存しました！');
         });
 
-        // CSV出力機能
-        exportCsvBtn.addEventListener('click', function() {
-            let csvContent = "";
-            const selectedDate = workDateInput.value ? new Date(workDateInput.value) : new Date();
-            const formattedDate = selectedDate.toLocaleDateString('ja-JP', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/\//g, '-');
-            csvContent += `日付,"${formattedDate}"\n\n`;
-
-            csvContent += "今日の目標:\n";
-            const goals = goalList.querySelectorAll('.goal-item span');
-            if (goals.length > 0) {
-                goals.forEach(goal => {
-                    csvContent += `"${goal.textContent.replace(/"/g, '""')}"\n`;
-                });
-            } else {
-                csvContent += "(目標なし)\n";
-            }
-            csvContent += "\n";
-
-            csvContent += "種別,タスク名,実績(分),完了時刻(HH:MM:SS)\n";
-
-            if (pomodoroLog.length > 0) {
-                pomodoroLog.forEach(log => {
-                    const typeDisplay = log.type === 'work' ? "ポモドーロ作業" : "ポモドーロ休憩";
-                    const taskName = log.type === 'work' ? "(作業内容を手入力)" : "-";
-                    const durationMinutes = Math.floor(log.duration / 60);
-                    const completedTime = log.completedAt.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-
-                    csvContent += `"${typeDisplay}","${taskName}","${durationMinutes}","${completedTime}"\n`;
-                });
-            } else {
-                csvContent += "(実績ログなし)\n";
-            }
-
-            const blob = new Blob([new Uint8Array([0xEF, 0xBB, 0xBF]), csvContent], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            if (link.download !== undefined) {
-                const url = URL.createObjectURL(blob);
-                link.setAttribute("href", url);
-                link.setAttribute("download", `実績データ_${formattedDate}.csv`);
-                link.style.visibility = 'hidden';
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
-            } else {
-                alert("お使いのブラウザはCSVダウンロードに対応していません。");
-            }
+        deleteDayDataBtn.addEventListener('click', async () => {
+            const dateToDelete = mainDatePicker.value;
+            if (!confirm(`${dateToDelete}のすべてのタスクと目標・ジャーナルを削除します。この操作は元に戻せません。よろしいですか？`)) return;
+            const batch = db.batch();
+            const tasksSnapshot = await taskCollection.where("plannedDate", "==", dateToDelete).get();
+            tasksSnapshot.forEach(doc => batch.delete(doc.ref));
+            const dailyDataRef = dailyDataCollection.doc(dateToDelete);
+            batch.delete(dailyDataRef);
+            await batch.commit();
+            alert(`${dateToDelete}のデータをすべて削除しました。`);
         });
-
-        // 初期設定
-        updateDisplay();
-        updateDescription();
-        if (!notificationSound.src || notificationSound.src === window.location.href) {
-             console.warn("注意: 通知音の音声ファイルパスが <audio> タグの src 属性に設定されていないか、JavaScriptで正しく設定されていません。`notificationSound.src = '...'` の行を確認・編集してください。");
+        
+        const alarmSound = new Audio('data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWcgQmFuZyBzb3VuZCBmcm9tIFNvdW5kQmlibGUuY29tIC8gUmVjb3JkZWQgYnkgTWlrZSBLb2VuaWcAAAAAADh2//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AAAA4doxGQV9TTQkAAQADADGAlYMAAZYCAwMhJCMjGxsdBAcIAgYGBgUDAwQEBAQEBAMDBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFB0%; box-sizing: border-box; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 6px; }
+        .daily-panel button { background-color: #27ae60; width: 100%; padding: 8px; }
+        #実績-panel .task-item { cursor: default; }
+        .task-item.completed { background-color: #d4edda; border-left-color: #28a745; }
+        .task-item.canceled { background-color: #f8d7da; border-left-color: #dc3545; opacity: 0.8; }
+        .export-button, #delete-day-data-btn { width: 100%; padding: 12px; margin-top: 15px; font-size: 1em; border: none; border-radius: 8px; cursor: pointer; color: white; }
+        #export-plan-btn { background-color: #2980b9; } #export-実績-btn { background-color: #8e44ad; }
+        #delete-day-data-btn { background-color: #e74c3c; margin-top: 5px; }
+        body.timer-finished-flash { animation: flash-background 1s 3; }
+        @keyframes flash-background {
+            0%, 100% { background-color: #f0f2f5; }
+            50% { background-color: #e74c3c; }
         }
-    </script>
+        @media (max-width: 1200px) { .main-grid { grid-template-columns: 1fr; } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="auth-bar">
+            <span id="user-info"></span>
+            <button id="login-btn">Googleアカウントでログイン</button>
+            <button id="logout-btn" style="display: none;">ログアウト</button>
+        </div>
+        <div id="main-content" class="main-content">
+             <h1>🚀【最終完成版 Ver.3.0】業務管理アプリ</h1>
+             <div class="date-selector-panel">
+                <input type="date" id="main-date-picker">
+            </div>
+            <div class="main-grid">
+                <div class="planning-column">
+                    <div class="panel daily-panel">
+                        <h2>本日のフォーカス</h2>
+                        <label for="daily-goal"><strong>本日の目標</strong></label>
+                        <input type="text" id="daily-goal" class="daily-input" placeholder="今日達成したい最も重要なこと">
+                        <label for="daily-journal"><strong>本日のジャーナル</strong></label>
+                        <textarea id="daily-journal" class="daily-input" rows="4" placeholder="一日の終わりに振り返りを記録しよう"></textarea>
+                        <button id="save-daily-btn">目標とジャーナルを保存</button>
+                    </div>
+                    <div id="plan-panel" class="panel">
+                        <h2>計画タスク</h2>
+                        <div class="input-form">
+                            <input type="text" id="plan-task-input" placeholder="タスク名">
+                            <input type="number" id="plan-duration-input" value="30" min="1" title="予定時間(分)">
+                            <button id="add-plan-btn">計画に追加</button>
+                        </div>
+                        <ul id="plan-list" class="task-list"></ul>
+                        <button id="export-plan-btn" class="export-button">📋 計画をCSV出力</button>
+                        <button id="delete-day-data-btn" class="export-button">🗑️ この日の全データをリセット</button>
+                    </div>
+                    <div id="実績-panel" class="panel">
+                        <h2>実績</h2>
+                        <ul id="実績-list" class="task-list"></ul>
+                        <button id="export-実績-btn" class="export-button">📈 実績をCSV出力</button>
+                    </div>
+                </div>
+                <div class="execution-column">
+                    <div id="execution-panel" class="panel">
+                        <h2>実行と分類</h2>
+                        <div class="execution-top">
+                            <div id="current-task-display"><p>実行タスクがありません</p></div>
+                            <div id="timer-clock">00:00</div>
+                        </div>
+                        <div class="execution-controls">
+                            <button id="start-btn" disabled>▶️ 開始/再開</button>
+                            <button id="pause-btn" disabled>⏸️ 一時停止</button>
+                            <button id="complete-btn" disabled>✅ 完了</button>
+                            <button id="cancel-btn" disabled>⏹️ 中止</button>
+                        </div>
+                        <hr style="margin: 20px 0; border: 1px solid #eee;">
+                        <div id="urgent-task-panel">
+                            <h3>割り込みタスク</h3>
+                            <div class="input-form">
+                                <input type="text" id="urgent-task-input" placeholder="緊急タスク名">
+                                <input type="number" id="urgent-duration-input" value="15" min="1">
+                                <button id="add-urgent-btn">最優先に追加</button>
+                            </div>
+                        </div>
+                        <div class="priority-grid">
+                            <div id="box-a" class="priority-box"><h3>🔥 緊急＆重要<br><small>(今すぐ取り組むべきタスク)</small></h3><ul id="box-a-list" class="task-list"></ul></div>
+                            <div id="box-b" class="priority-box"><h3>🌱 重要＆非緊急<br><small>(計画的に取り組むべきタスク)</small></h3><ul id="box-b-list" class="task-list"></ul></div>
+                            <div id="box-c" class="priority-box"><h3>⚡️ 緊急＆非重要<br><small>(移譲できるタスク)</small></h3><ul id="box-c-list" class="task-list"></ul></div>
+                            <div id="box-d" class="priority-box"><h3>🗑️ 非緊急 & 非重要<br><small>(削除できるタスク)</small></h3><ul id="box-d-list" class="task-list"></ul></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+<script>
+    // --- Firebase初期化 ---
+    const firebaseConfig = {
+        apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
+        authDomain: "my-private-task-manegment.firebaseapp.com",
+        projectId: "my-private-task-manegment",
+        storageBucket: "my-private-task-manegment.appspot.com",
+        messagingSenderId: "272952129117",
+        appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    document.addEventListener('DOMContentLoaded', () => {
+        let tasks = [];
+        let taskCollection;
+        let dailyDataCollection;
+        let unsubscribeTasks, unsubscribeDaily;
+        let timerInterval = null;
+        
+        const mainDatePicker = document.getElementById('main-date-picker');
+        const loginBtn = document.getElementById('login-btn');
+        const logoutBtn = document.getElementById('logout-btn');
+        const userInfo = document.getElementById('user-info');
+        const mainContent = document.getElementById('main-content');
+        const dailyGoalInput = document.getElementById('daily-goal');
+        const dailyJournalInput = document.getElementById('daily-journal');
+        const saveDailyBtn = document.getElementById('save-daily-btn');
+        const planTaskInput = document.getElementById('plan-task-input');
+        const planDurationInput = document.getElementById('plan-duration-input');
+        const addPlanBtn = document.getElementById('add-plan-btn');
+        const allTaskLists = document.querySelectorAll('.task-list');
+        const urgentTaskInput = document.getElementById('urgent-task-input');
+        const urgentDurationInput = document.getElementById('urgent-duration-input');
+        const addUrgentBtn = document.getElementById('add-urgent-btn');
+        const currentTaskDisplay = document.getElementById('current-task-display');
+        const timerClock = document.getElementById('timer-clock');
+        const startBtn = document.getElementById('start-btn');
+        const pauseBtn = document.getElementById('pause-btn');
+        const completeBtn = document.getElementById('complete-btn');
+        const cancelBtn = document.getElementById('cancel-btn');
+        const exportPlanBtn = document.getElementById('export-plan-btn');
+        const export実績Btn = document.getElementById('export-実績-btn');
+        const deleteDayDataBtn = document.getElementById('delete-day-data-btn');
+        const planList = document.getElementById('plan-list');
+
+        // ★★★ 通知機能の初期化 ★★★
+        if ('Notification' in window && Notification.permission !== 'granted') {
+            Notification.requestPermission();
+        }
+
+        auth.onAuthStateChanged(user => {
+            if (user) {
+                userInfo.textContent = `${user.displayName} さん`;
+                loginBtn.style.display = 'none';
+                logoutBtn.style.display = 'block';
+                mainContent.style.display = 'block';
+                taskCollection = db.collection('users').doc(user.uid).collection('tasks');
+                dailyDataCollection = db.collection('users').doc(user.uid).collection('daily_data');
+                loadAllDataForDate(mainDatePicker.value);
+            } else {
+                userInfo.textContent = '';
+                loginBtn.style.display = 'block';
+                logoutBtn.style.display = 'none';
+                mainContent.style.display = 'none';
+                if (unsubscribeTasks) unsubscribeTasks();
+                if (unsubscribeDaily) unsubscribeDaily();
+                tasks = [];
+                render();
+            }
+        });
+
+        loginBtn.addEventListener('click', () => auth.signInWithPopup(new firebase.auth.GoogleAuthProvider()));
+        logoutBtn.addEventListener('click', () => auth.signOut());
+
+        function loadAllDataForDate(dateStr) {
+            if (!auth.currentUser || !dateStr) return;
+            if (unsubscribeTasks) unsubscribeTasks();
+            unsubscribeTasks = taskCollection.where("plannedDate", "==", dateStr).orderBy("order").onSnapshot(snapshot => {
+                tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                render();
+            });
+            if (unsubscribeDaily) unsubscribeDaily();
+            unsubscribeDaily = dailyDataCollection.doc(dateStr).onSnapshot(doc => {
+                const data = doc.exists ? doc.data() : { goal: '', journal: '' };
+                dailyGoalInput.value = data.goal || '';
+                dailyJournalInput.value = data.journal || '';
+            });
+        }
+        
+        saveDailyBtn.addEventListener('click', async () => {
+            await dailyDataCollection.doc(mainDatePicker.value).set({ goal: dailyGoalInput.value, journal: dailyJournalInput.value }, { merge: true });
+            alert('保存しました！');
+        });
+
+        deleteDayDataBtn.addEventListener('click', async () => {
+            const dateToDelete = mainDatePicker.value;
+            if (!confirm(`${dateToDelete}のすべてのタスクと目標・ジャーナルを削除します。この操作は元に戻せません。よろしいですか？`)) return;
+            const batch = db.batch();
+            const tasksSnapshot = await taskCollection.where("plannedDate", "==", dateToDelete).get();
+            tasksSnapshot.forEach(doc => batch.delete(doc.ref));
+            const dailyDataRef = dailyDataCollection.doc(dateToDelete);
+            batch.delete(dailyDataRef);
+            await batch.commit();
+            alert(`${dateToDelete}のデータをすべて削除しました。`);
+        });
+        
+        const alarmSound = new Audio('data:audio/mpeg;base64,SUQzBAAAAAABEVRYWFgAAAAtAAADY29tbWVudABCaWcgQmFuZyBzb3VuZCBmcm9tIFNvdW5kQmlibGUuY29tIC8gUmVjb3JkZWQgYnkgTWlrZSBLb2VuaWcAAAAAADh2//////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////8AAAA4doxGQV9TTQkAAQADADGAlYMAAZYCAwMhJCMjGxsdBAcIAgYGBgUDAwQEBAQEBAMDBAUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUFBQUEu//uQxAADACyATUMMMAYAAAQNdAAAFgACAAAFhQAA//uQxAABASxATwMMMAYAAAQI0AAAEgACAAAEhQAA//uQxAAAByxAUQMMMAYAAAPt0AAAIgACAAAHhQAA//uQxAAAECxAUgMMMAYAAANV0AAAJgACAAAFhQAA//uQxAAAICxAUwMMMAYAAAIx0AAAGgACAAAGhQAA//uQxAAADyxAVQMMMAYAAAFN0AAAFgACAAA5hQAA//uQxAAAESxAVgMMMAYAAAIV0AAADgACAAAEhQAA//uQxAAAISxAVwMMMAYAAAGR0AAACgACAAAFhQAA//uQxAAADyxAWQMMMAYAAAD90AAAIAACAAAHhQAA//uQxAAAESxAWgMMMAYAAAFN0AAAEgACAAAFhQAA//uQxAAAIixAWwMMMAYAAACF0AAACgACAAAGhQAA//uQxAAADyxAXQMMMAYAAAEV0AAAGgACAAAEhQAA//uQxAAEECxAXgMMMAYAAAGl0AAAEgACAAAGhQAA//uQxAAEICxAXwMMMAYAAAD50AAAIgACAAAGhQAA//u-');
+        
+        async function addTask(isUrgent = false) {
+            let text, duration, taskDate, location, status, order;
+            taskDate = mainDatePicker.value;
+            if (isUrgent) {
+                text = urgentTaskInput.value.trim();
+                duration = parseInt(urgentDurationInput.value);
+                location = 'box-a-list';
+                status = 'ready';
+                order = -1; 
+            } else {
+                text = planTaskInput.value.trim();
+                duration = parseInt(planDurationInput.value);
+                location = 'plan-list';
+                status = 'planned';
+                order = tasks.filter(t => t.location === location && t.plannedDate === taskDate).length;
+            }
+            if (!text || !duration || duration <= 0 || !taskDate) {
+                alert('タスク名、0より大きい予定時間、実施予定日をすべて正しく入力してください。'); return;
+            }
+            const newTaskData = { text, plannedDuration: duration, status, location, plannedDate: taskDate, actualDate: null, isUrgent, order, createdAt: firebase.firestore.FieldValue.serverTimestamp(), workTime: 0, breakTime: 0, initialWorkTime: 0 };
+            await taskCollection.add(newTaskData);
+            if (isUrgent) urgentTaskInput.value = ''; else planTaskInput.value = '';
+        }
+
+        function render() {
+            const sortedTasks = sortTasksForRender();
+            allTaskLists.forEach(list => list.innerHTML = '');
+            sortedTasks.forEach(task => {
+                const taskListEl = document.getElementById(task.location);
+                if (taskListEl) {
+                    const taskItem = createTaskElement(task);
+                    taskListEl.appendChild(taskItem);
+                }
+            });
+            updateCurrentTaskDisplay();
+        }
+        function sortTasksForRender() { return tasks.slice().sort((a, b) => (a.order || 0) - (b.order || 0)); }
+        function createTaskElement(task) {
+            const item = document.createElement('li');
+            item.className = `task-item ${task.status} ${task.isUrgent ? 'urgent' : ''}`;
+            item.dataset.id = task.id;
+            item.setAttribute('draggable', !['completed', 'canceled'].includes(task.status));
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'task-content';
+            const workTimeMin = Math.ceil((task.workTime || 0) / 60);
+            if (['completed', 'canceled'].includes(task.status)) {
+                contentDiv.innerHTML = `<span class="task-text">${task.text}</span><span class="task-details">実績: ${workTimeMin}分</span>`;
+            } else {
+                contentDiv.innerHTML = `<span class="task-text">${task.text}</span><span class="task-details">${task.plannedDuration}分</span>`;
+            }
+            item.appendChild(contentDiv);
+            if (task.location === 'plan-list') {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-plan-btn';
+                deleteBtn.title = '計画から削除';
+                deleteBtn.innerHTML = '×';
+                item.appendChild(deleteBtn);
+            }
+            return item;
+        }
+
+        function findNextTask() {
+            const activeTask = tasks.find(t => ['working', 'paused'].includes(t.status));
+            if (activeTask) return activeTask;
+            const priorityOrder = ['box-a-list', 'box-b-list', 'box-c-list', 'box-d-list'];
+            for (const listId of priorityOrder) {
+                const task = sortTasksForRender().find(t => t.location === listId);
+                if (task) return task;
+            }
+            return null;
+        }
+        function updateCurrentTaskDisplay() {
+            const currentTask = findNextTask();
+            const originalTitle = document.querySelector('title').textContent;
+            if (!currentTask) {
+                currentTaskDisplay.innerHTML = `<p>実行タスクがありません</p>`;
+                timerClock.textContent = '00:00';
+                updateControlButtons('initial');
+                document.title = originalTitle.split(" - ")[0]; // タイトルを元に戻す
+                return;
+            }
+            const remainingTime = (currentTask.plannedDuration * 60) - (currentTask.workTime || 0);
+            currentTaskDisplay.innerHTML = `<p>${currentTask.text}</p><small>予定: ${currentTask.plannedDuration}分</small>`;
+            timerClock.textContent = formatTime(remainingTime < 0 ? 0 : remainingTime);
+            if(currentTask.status === 'working') {
+                document.title = `${timerClock.textContent} - ${currentTask.text}`;
+            } else {
+                 document.title = originalTitle.split(" - ")[0];
+            }
+            updateControlButtons(currentTask.status);
+        }
+        function formatTime(seconds) { return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`; }
+        function updateControlButtons(status) {
+            startBtn.disabled = !['ready', 'paused'].includes(status);
+            pauseBtn.disabled = status !== 'working';
+            completeBtn.disabled = !['ready', 'working', 'paused'].includes(status);
+            cancelBtn.disabled = !['ready', 'working', 'paused'].includes(status);
+        }
+        
+        async function startTimer() {
+            const task = findNextTask();
+            if (!task || task.status === 'working') return;
+            const updates = { status: 'working', startTime: Date.now(), initialWorkTime: task.workTime || 0 };
+            if (!task.actualDate) updates.actualDate = new Date().toISOString().split('T')[0];
+            await updateTask(task.id, updates);
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const currentTask = tasks.find(t => t.id === task.id);
+                if (!currentTask || currentTask.status !== 'working') return clearInterval(timerInterval);
+                const elapsed = Math.floor((Date.now() - currentTask.startTime) / 1000);
+                const workTime = currentTask.initialWorkTime + elapsed;
+                const remainingTime = (currentTask.plannedDuration * 60) - workTime;
+                
+                timerClock.textContent = formatTime(remainingTime < 0 ? 0 : remainingTime);
+                document.title = `${timerClock.textContent} - ${currentTask.text}`;
+
+                if (remainingTime < 0) {
+                    handleTimerCompletion(currentTask);
+                }
+            }, 1000);
+        }
+
+        async function handleTimerCompletion(task) {
+            clearInterval(timerInterval);
+            alarmSound.play();
+            
+            // 1. 視覚通知（画面フラッシュ）
+            document.body.classList.add('timer-finished-flash');
+            setTimeout(() => document.body.classList.remove('timer-finished-flash'), 3000);
+
+            // 2. 視覚通知（タブタイトル）
+            document.title = `⏰時間です！- ${task.text}`;
+
+            // 3. 視覚通知（ブラウザ通知）
+            if ('Notification' in window && Notification.permission === 'granted') {
+                new Notification(`「${task.text}」の予定時間が終了しました！`, {
+                    body: '休憩して次のタスクに進みましょう。',
+                    icon: 'https://img.icons8.com/plasticine/100/000000/alarm-clock.png'
+                });
+            } else {
+                alert(`「${task.text}」の予定時間が終了しました！`);
+            }
+            
+            // タスクの状態を更新
+            await updateTask(task.id, { status: 'paused', workTime: task.plannedDuration * 60 });
+        }
+
+        async function pauseTimer() {
+            const task = tasks.find(t => t.status === 'working');
+            if (task) {
+                clearInterval(timerInterval);
+                const elapsed = Math.floor((Date.now() - task.startTime) / 1000);
+                const newWorkTime = task.initialWorkTime + elapsed;
+                await updateTask(task.id, { status: 'paused', workTime: newWorkTime });
+            }
+        }
+        
+        async function changeStatus(status) {
+            const task = findNextTask();
+            if (!task) return;
+            if (task.status === 'working') await pauseTimer();
+            await updateTask(task.id, { status, location: '実績-list' });
+        }
+
+        async function updateTask(taskId, data) { await taskCollection.doc(String(taskId)).update(data); }
+        
+        function setupDragAndDrop() {
+            let draggedItemId = null;
+            document.addEventListener('dragstart', e => { if (e.target.classList.contains('task-item')) { draggedItemId = e.target.dataset.id; setTimeout(() => e.target.classList.add('dragging'), 0); } });
+            document.addEventListener('dragend', e => { if (e.target.classList.contains('task-item')) { e.target.classList.remove('dragging'); draggedItemId = null; } });
+            allTaskLists.forEach(list => {
+                list.addEventListener('dragover', e => { e.preventDefault(); list.classList.add('drag-over'); });
+                list.addEventListener('dragleave', () => list.classList.remove('drag-over'));
+                list.addEventListener('drop', async e => {
+                    e.preventDefault(); list.classList.remove('drag-over'); if (!draggedItemId) return;
+                    const draggedEl = document.querySelector(`[data-id="${draggedItemId}"]`);
+                    const afterElement = getDragAfterElement(list, e.clientY);
+                    if (afterElement) list.insertBefore(draggedEl, afterElement); else list.appendChild(draggedEl);
+                    const newOrderIds = Array.from(list.children).map(item => item.dataset.id);
+                    const batch = db.batch();
+                    newOrderIds.forEach((id, index) => {
+                        const taskDocRef = taskCollection.doc(String(id));
+                        const task = tasks.find(t => t.id === id);
+                        if(task){
+                            const updates = { location: list.id, order: index };
+                            if (list.id.startsWith('box-')) {
+                                updates.originalLocation = list.id;
+                                if(task.status === 'planned') updates.status = 'ready';
+                            }
+                            batch.update(taskDocRef, updates);
+                        }
+                    });
+                    await batch.commit();
+                });
+            });
+        }
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) return { offset, element: child };
+                return closest;
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+        
+        function exportCsv(type) {
+            const date = mainDatePicker.value;
+            let data, header, filename;
+            const priorityMap = { 'box-a-list': 'A:緊急&重要', 'box-b-list': 'B:重要&非緊急', 'box-c-list': 'C:緊急&非重要', 'box-d-list': 'D:非緊急&非重要' };
+            if (type === 'plan') {
+                data = tasks.filter(t => t.location === 'plan-list');
+                if (data.length === 0) return alert('出力する計画がありません。');
+                header = ['日付', 'タスク名', '予定時間(分)'];
+                filename = `計画_${date}.csv`;
+                const rows = data.map(t => [t.plannedDate, `"${t.text.replace(/"/g, '""')}"`, t.plannedDuration]);
+                triggerDownload("data:text/csv;charset=utf-8,\uFEFF" + [header.join(','), ...rows.map(e => e.join(','))].join('\n'), filename);
+            } else {
+                data = tasks.filter(t => t.location === '実績-list');
+                if (data.length === 0) return alert('出力する実績がありません。');
+                header = ['実施日', '優先度', 'タスク名', '作業時間(分)', '休憩時間(分)'];
+                filename = `実績_${date}.csv`;
+                 const rows = data.map(t => {
+                    const priority = priorityMap[t.originalLocation] || (t.isUrgent ? 'A:緊急&重要' : 'N/A');
+                    return [t.actualDate, priority, `"${t.text.replace(/"/g, '""')}"`, Math.ceil((t.workTime || 0)/60), Math.ceil((t.breakTime || 0)/60)];
+                });
+                triggerDownload("data:text/csv;charset=utf-8,\uFEFF" + [header.join(','), ...rows.map(e => e.join(','))].join('\n'), filename);
+            }
+        }
+        function triggerDownload(uri, filename) { const link = document.createElement('a'); link.setAttribute('href', encodeURI(uri)); link.setAttribute('download', filename); link.click(); }
+
+        mainDatePicker.addEventListener('change', (e) => loadAllDataForDate(e.target.value));
+        addPlanBtn.addEventListener('click', () => addTask(false));
+        addUrgentBtn.addEventListener('click', () => addTask(true));
+        startBtn.addEventListener('click', startTimer);
+        pauseBtn.addEventListener('click', pauseTimer);
+        completeBtn.addEventListener('click', () => changeStatus('completed'));
+        cancelBtn.addEventListener('click', () => changeStatus('canceled'));
+        exportPlanBtn.addEventListener('click', () => exportCsv('plan'));
+        export実績Btn.addEventListener('click', () => exportCsv('実績'));
+        planList.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-plan-btn')) {
+                const taskItem = e.target.closest('.task-item');
+                const taskId = taskItem.dataset.id;
+                if (confirm(`計画タスク「${taskItem.querySelector('.task-text').textContent}」を本当に削除しますか？`)) {
+                    await taskCollection.doc(taskId).delete();
+                }
+            }
+        });
+        
+        mainDatePicker.value = new Date().toISOString().split('T')[0];
+        setupDragAndDrop();
+        if (auth.currentUser) {
+            loadAllDataForDate(mainDatePicker.value);
+        } else {
+            render();
+        }
+    });
+</script>
+</body>
+</html>
+```forEach(list => list.innerHTML = '');
+            sortedTasks.forEach(task => {
+                const taskListEl = document.getElementById(task.location);
+                if (taskListEl) {
+                    const taskItem = createTaskElement(task);
+                    taskListEl.appendChild(taskItem);
+                }
+            });
+            updateCurrentTaskDisplay();
+        }
+        function sortTasksForRender() { return tasks.slice().sort((a, b) => (a.order || 0) - (b.order || 0)); }
+        function createTaskElement(task) {
+            const item = document.createElement('li');
+            item.className = `task-item ${task.status} ${task.isUrgent ? 'urgent' : ''}`;
+            item.dataset.id = task.id;
+            item.setAttribute('draggable', !['completed', 'canceled'].includes(task.status));
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'task-content';
+            const workTimeMin = Math.ceil((task.workTime || 0) / 60);
+            if (['completed', 'canceled'].includes(task.status)) {
+                contentDiv.innerHTML = `<span class="task-text">${task.text}</span><span class="task-details">実績: ${workTimeMin}分</span>`;
+            } else {
+                contentDiv.innerHTML = `<span class="task-text">${task.text}</span><span class="task-details">${task.plannedDuration}分</span>`;
+            }
+            item.appendChild(contentDiv);
+            if (task.location === 'plan-list') {
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'delete-plan-btn';
+                deleteBtn.title = '計画から削除';
+                deleteBtn.innerHTML = '×';
+                item.appendChild(deleteBtn);
+            }
+            return item;
+        }
+
+        function findNextTask() {
+            const activeTask = tasks.find(t => ['working', 'paused'].includes(t.status));
+            if (activeTask) return activeTask;
+            const priorityOrder = ['box-a-list', 'box-b-list', 'box-c-list', 'box-d-list'];
+            for (const listId of priorityOrder) {
+                const task = sortTasksForRender().find(t => t.location === listId);
+                if (task) return task;
+            }
+            return null;
+        }
+        function updateCurrentTaskDisplay() {
+            const currentTask = findNextTask();
+            if (!currentTask) {
+                currentTaskDisplay.innerHTML = `<p>実行タスクがありません</p>`;
+                timerClock.textContent = '00:00';
+                updateControlButtons('initial');
+                return;
+            }
+            const remainingTime = (currentTask.plannedDuration * 60) - (currentTask.workTime || 0);
+            currentTaskDisplay.innerHTML = `<p>${currentTask.text}</p><small>予定: ${currentTask.plannedDuration}分</small>`;
+            timerClock.textContent = formatTime(remainingTime < 0 ? 0 : remainingTime);
+            updateControlButtons(currentTask.status);
+        }
+        function formatTime(seconds) { return `${Math.floor(seconds / 60).toString().padStart(2, '0')}:${(seconds % 60).toString().padStart(2, '0')}`; }
+        function updateControlButtons(status) {
+            startBtn.disabled = !['ready', 'paused'].includes(status);
+            pauseBtn.disabled = status !== 'working';
+            completeBtn.disabled = !['ready', 'working', 'paused'].includes(status);
+            cancelBtn.disabled = !['ready', 'working', 'paused'].includes(status);
+        }
+        
+        async function startTimer() {
+            const task = findNextTask();
+            if (!task || task.status === 'working') return;
+            const updates = { status: 'working', startTime: Date.now(), initialWorkTime: task.workTime || 0 };
+            if (!task.actualDate) updates.actualDate = new Date().toISOString().split('T')[0];
+            await updateTask(task.id, updates);
+            
+            clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                const currentTask = tasks.find(t => t.id === task.id);
+                if (!currentTask || currentTask.status !== 'working') return clearInterval(timerInterval);
+                const elapsed = Math.floor((Date.now() - currentTask.startTime) / 1000);
+                const workTime = currentTask.initialWorkTime + elapsed;
+                const remainingTime = (currentTask.plannedDuration * 60) - workTime;
+                
+                timerClock.textContent = formatTime(remainingTime < 0 ? 0 : remainingTime);
+                if (remainingTime < 0) {
+                    pauseTimer();
+                    showNotification('時間です！', `「${currentTask.text}」の予定時間が終了しました！`);
+                }
+            }, 1000);
+        }
+
+        async function pauseTimer() {
+            const task = tasks.find(t => t.status === 'working');
+            if (task) {
+                clearInterval(timerInterval);
+                const elapsed = Math.floor((Date.now() - task.startTime) / 1000);
+                const newWorkTime = task.initialWorkTime + elapsed;
+                await updateTask(task.id, { status: 'paused', workTime: newWorkTime });
+            }
+        }
+        
+        async function changeStatus(status) {
+            const task = findNextTask();
+            if (!task) return;
+            if (task.status === 'working') await pauseTimer();
+            const finalTaskState = tasks.find(t => t.id === task.id);
+            await updateTask(task.id, { status, location: '実績-list' });
+        }
+
+        async function updateTask(taskId, data) { await taskCollection.doc(String(taskId)).update(data); }
+        
+        function setupDragAndDrop() {
+            let draggedItemId = null;
+            document.addEventListener('dragstart', e => { if (e.target.classList.contains('task-item')) { draggedItemId = e.target.dataset.id; setTimeout(() => e.target.classList.add('dragging'), 0); } });
+            document.addEventListener('dragend', e => { if (e.target.classList.contains('task-item')) { e.target.classList.remove('dragging'); draggedItemId = null; } });
+            allTaskLists.forEach(list => {
+                list.addEventListener('dragover', e => { e.preventDefault(); list.classList.add('drag-over'); });
+                list.addEventListener('dragleave', () => list.classList.remove('drag-over'));
+                list.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    list.classList.remove('drag-over');
+                    if (!draggedItemId) return;
+
+                    const draggedEl = document.querySelector(`[data-id="${draggedItemId}"]`);
+                    const afterElement = getDragAfterElement(list, e.clientY);
+                    
+                    if (afterElement) list.insertBefore(draggedEl, afterElement);
+                    else list.appendChild(draggedEl);
+
+                    const newOrderIds = Array.from(list.children).map(item => item.dataset.id);
+                    const batch = db.batch();
+                    newOrderIds.forEach((id, index) => {
+                        const taskDocRef = taskCollection.doc(String(id));
+                        const task = tasks.find(t => t.id === id);
+                        if(task){
+                            const updates = { location: list.id, order: index };
+                            if (list.id.startsWith('box-')) {
+                                updates.originalLocation = list.id;
+                                if(task.status === 'planned') updates.status = 'ready';
+                            }
+                            batch.update(taskDocRef, updates);
+                        }
+                    });
+                    await batch.commit();
+                });
+            });
+        }
+        function getDragAfterElement(container, y) {
+            const draggableElements = [...container.querySelectorAll('.task-item:not(.dragging)')];
+            return draggableElements.reduce((closest, child) => {
+                const box = child.getBoundingClientRect();
+                const offset = y - box.top - box.height / 2;
+                if (offset < 0 && offset > closest.offset) return { offset, element: child };
+                return closest;
+            }, { offset: Number.NEGATIVE_INFINITY }).element;
+        }
+        
+        function exportCsv(type) {
+            const date = mainDatePicker.value;
+            let data, header, filename;
+            const priorityMap = { 'box-a-list': 'A:緊急&重要', 'box-b-list': 'B:重要&非緊急', 'box-c-list': 'C:緊急&非重要', 'box-d-list': 'D:非緊急&非重要' };
+            if (type === 'plan') {
+                data = tasks.filter(t => t.location === 'plan-list');
+                if (data.length === 0) return alert('出力する計画がありません。');
+                header = ['日付', 'タスク名', '予定時間(分)'];
+                filename = `計画_${date}.csv`;
+                const rows = data.map(t => [t.plannedDate, `"${t.text.replace(/"/g, '""')}"`, t.plannedDuration]);
+                triggerDownload("data:text/csv;charset=utf-8,\uFEFF" + [header.join(','), ...rows.map(e => e.join(','))].join('\n'), filename);
+            } else {
+                data = tasks.filter(t => t.location === '実績-list');
+                if (data.length === 0) return alert('出力する実績がありません。');
+                header = ['実施日', '優先度', 'タスク名', '作業時間(分)', '休憩時間(分)'];
+                filename = `実績_${date}.csv`;
+                 const rows = data.map(t => {
+                    const priority = priorityMap[t.originalLocation] || (t.isUrgent ? 'A:緊急&重要' : 'N/A');
+                    return [t.actualDate, priority, `"${t.text.replace(/"/g, '""')}"`, Math.ceil((t.workTime || 0)/60), Math.ceil((t.breakTime || 0)/60)];
+                });
+                triggerDownload("data:text/csv;charset=utf-8,\uFEFF" + [header.join(','), ...rows.map(e => e.join(','))].join('\n'), filename);
+            }
+        }
+        function triggerDownload(uri, filename) { const link = document.createElement('a'); link.setAttribute('href', encodeURI(uri)); link.setAttribute('download', filename); link.click(); }
+
+        function checkNotificationPermission() {
+            if (!("Notification" in window)) {
+                notificationStatus.textContent = "このブラウザは通知をサポートしていません";
+            } else if (Notification.permission === 'granted') {
+                notificationStatus.textContent = "デスクトップ通知：許可済み";
+                requestNotificationBtn.style.display = 'none';
+            } else if (Notification.permission !== 'denied') {
+                notificationStatus.textContent = "デスクトップ通知：未許可";
+                requestNotificationBtn.style.display = 'block';
+            } else {
+                notificationStatus.textContent = "デスクトップ通知：ブロック中";
+                requestNotificationBtn.style.display = 'none';
+            }
+        }
+        
+        requestNotificationBtn.addEventListener('click', () => {
+            Notification.requestPermission().then(permission => {
+                checkNotificationPermission();
+            });
+        });
+
+        mainDatePicker.addEventListener('change', (e) => loadAllDataForDate(e.target.value));
+        addPlanBtn.addEventListener('click', () => addTask(false));
+        addUrgentBtn.addEventListener('click', () => addTask(true));
+        startBtn.addEventListener('click', startTimer);
+        pauseBtn.addEventListener('click', pauseTimer);
+        completeBtn.addEventListener('click', () => changeStatus('completed'));
+        cancelBtn.addEventListener('click', () => changeStatus('canceled'));
+        exportPlanBtn.addEventListener('click', () => exportCsv('plan'));
+        export実績Btn.addEventListener('click', () => exportCsv('実績'));
+        planList.addEventListener('click', async (e) => {
+            if (e.target.classList.contains('delete-plan-btn')) {
+                const taskItem = e.target.closest('.task-item');
+                const taskId = taskItem.dataset.id;
+                if (confirm(`計画タスク「${taskItem.querySelector('.task-text').textContent}」を本当に削除しますか？`)) {
+                    await taskCollection.doc(taskId).delete();
+                }
+            }
+        });
+        
+        mainDatePicker.value = new Date().toISOString().split('T')[0];
+        setupDragAndDrop();
+        if (auth.currentUser) {
+            loadAllDataForDate(mainDatePicker.value);
+        } else {
+            render();
+        }
+    });
+</script>
 </body>
 </html>
