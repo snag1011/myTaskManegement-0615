@@ -386,6 +386,23 @@ const app = initializeApp(firebaseConfig);
         downloadCsv(csvContent, '計画');
     }
 
+    async function saveDailyData() {
+    const user = auth.currentUser;
+    if (!user) return;
+    const dailyData = {
+        goal: document.getElementById('daily-goal').value,
+        journal: document.getElementById('daily-journal').value,
+        timestamp: new Date()
+    };
+    try {
+        await setDoc(doc(db, 'users', user.uid, 'daily', new Date().toISOString().split('T')[0]), dailyData);
+        console.log('データ保存成功');
+    } catch (error) {
+        console.error('データ保存失敗:', error);
+        alert('データの保存に失敗しました。');
+    }
+}
+
     function exportResultToCsv() { // 関数名変更
         const results = document.querySelectorAll('#result-list .result-item'); // セレクタ変更
         if (results.length === 0) {
