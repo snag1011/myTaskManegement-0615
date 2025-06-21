@@ -5,22 +5,45 @@ document.addEventListener('DOMContentLoaded', () => {
     // =======================================================
 
     // Firebase SDKのインポート
-    import { initializeApp } from "firebase/app";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-    import { getFirestore } from "firebase/firestore"; // Firestoreを使用する場合
-    import { getAnalytics } from "firebase/analytics";
+    //import { initializeApp } from "firebase/app";
+   // import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
+   // import { getFirestore } from "firebase/firestore"; // Firestoreを使用する場合
+   // import { getAnalytics } from "firebase/analytics";
 
     // Firebase設定
-    const firebaseConfig = {
-        apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
-        authDomain: "my-private-task-manegment.firebaseapp.com",
-        projectId: "my-private-task-manegment",
-        storageBucket: "my-private-task-manegment.firebasestorage.app",
-        messagingSenderId: "272952129117",
-        appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4",
-        measurementId: "G-NRTVNKPLF6"
-    };
+   // const firebaseConfig = {
+   //     apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
+   //     authDomain: "my-private-task-manegment.firebaseapp.com",
+   //     projectId: "my-private-task-manegment",
+   //     storageBucket: "my-private-task-manegment.firebasestorage.app",
+   //     messagingSenderId: "272952129117",
+   //     appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4",
+   //     measurementId: "G-NRTVNKPLF6"
+   // };
 
+//
+
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+const firebaseConfig = {
+  apiKey: "AIzaSyAdMv_zeq5WdA3l2JsEPe3uQLFG_4Jp4To",
+  authDomain: "my-task-manegment.firebaseapp.com",
+  projectId: "my-task-manegment",
+  storageBucket: "my-task-manegment.firebasestorage.app",
+  messagingSenderId: "1081004250364",
+  appId: "1:1081004250364:web:fe78d16366ddbe953f3379"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+    
+//
+
+    
     // Firebase初期化
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
