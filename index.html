@@ -1,4 +1,43 @@
-<!DOCTYPE html>
+<script type="text/javascript">
+        var gk_isXlsx = false;
+        var gk_xlsxFileLookup = {};
+        var gk_fileData = {};
+        function filledCell(cell) {
+          return cell !== '' && cell != null;
+        }
+        function loadFileData(filename) {
+        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
+            try {
+                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
+                var firstSheetName = workbook.SheetNames[0];
+                var worksheet = workbook.Sheets[firstSheetName];
+
+                // Convert sheet to JSON to filter blank rows
+                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
+                // Filter out blank rows (rows where all cells are empty, null, or undefined)
+                var filteredData = jsonData.filter(row => row.some(filledCell));
+
+                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
+                var headerRowIndex = filteredData.findIndex((row, index) =>
+                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
+                );
+                // Fallback
+                if (headerRowIndex === -1 || headerRowIndex > 25) {
+                  headerRowIndex = 0;
+                }
+
+                // Convert filtered JSON back to CSV
+                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
+                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
+                return csv;
+            } catch (e) {
+                console.error(e);
+                return "";
+            }
+        }
+        return gk_fileData[filename] || "";
+        }
+        </script><!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
@@ -8,130 +47,112 @@
     <script type="module" src="app.mjs"></script>
 </head>
 <body>
-    <div class="top-bar">
-        <button id="notification-btn">デスクトップ通知を許可</button>
-        <div class="auth-bar">
-            <div id="user-info" style="display: none;">
-                <img id="user-photo" src="" alt="User Photo">
-                <span id="user-name"></span>
-            </div>
-            <button id="login-btn">Googleアカウントでログイン</button>
-            <button id="logout-btn" style="display: none;">ログアウト</button>
-        </div>
-    </div>
-
     <div class="container">
         <h1>業務管理アプリ</h1>
-        <div id="main-content" style="display: none;">
-            <div class="main-grid">
-                <div>
-                    <div id="focus-panel" class="panel">
-                        <h2>本日のフォーカス</h2>
-                        <label>本日の目標</label>
+        <div class="main-grid">
+            <div>
+                <div class="panel" id="focus-panel">
+                    <h2>本日のフォーカス</h2>
+                    <div>
+                        <label for="daily-goal">本日の目標</label>
                         <textarea id="daily-goal" rows="3"></textarea>
-                        <label>本日のジャーナル</label>
+                        <label for="daily-journal">本日のジャーナル</label>
                         <textarea id="daily-journal" rows="5"></textarea>
                         <div class="panel-actions">
                             <button id="save-daily-btn" class="button-success">目標とジャーナルを保存</button>
                             <span id="save-confirm-msg" class="save-confirm-msg"></span>
                         </div>
                     </div>
+                </div>
 
-                    <div id="plan-panel" class="panel">
-                        <h2>計画タスク</h2>
-                        <form id="add-plan-form" class="input-form">
-                            <input type="text" id="plan-task-input" placeholder="タスク名">
-                            <div class="duration-input-wrapper">
-                                <input type="number" id="plan-duration-input" min="duration" value="1">
-                                <span>秒</span>
-                            </div>
-                            <button type="submit">追加</button>
-                        </form>
-
-                        <ul id="plan-list" class="task-list drop-zone"></ul>
-
-                        <div class="panel-actions">
-                            <button id="export-plan-btn" class="export-button">📋 計画をCSV出力</button>
-                            <button id="delete-day-data-btn" class="button-danger">🗑️ この日のデータをリセット</button>
+                <div class="panel" id="plan-panel">
+                    <h2>計画タスク</h2>
+                    <form id="add-plan-form" class="input-form">
+                        <input type="text" id="plan-task-input" placeholder="タスク名">
+                        <div class="duration-input-wrapper">
+                            <input type="number" id="plan-duration-input" min="1" placeholder="秒">
+                            <span>秒</span>
                         </div>
-                    </div>
-
-                    <div id="result-panel" class="panel">
-                        <h2>実行結果</h2>
-                        <ul id="result-list" class="task-list"></ul> <!-- ID変更 -->
-                        <div class="panel-actions">
-                            <button id="export-result-btn" class="export-button">📈 実績をCSV出力</button> <!-- ID変更 -->
-                        </div>
+                        <button type="submit">追加</button>
+                    </form>
+                    <ul id="plan-list" class="task-list drop-zone"></ul>
+                    <div class="panel-actions">
+                        <button id="export-plan-btn" class="export-button">📋 計画をCSV出力</button>
+                        <button id="delete-day-data-btn" class="button-danger">🗑️ この日のデータをリセット</button>
                     </div>
                 </div>
 
-                <div id="execution-panel" class="panel">
-                    <h2>実行と分類</h2>
-                    <div id="current-task-display">
-                        <p>実行するタスクをクリックで選択</p>
+                <div class="panel" id="result-panel">
+                    <h2>実行結果</h2>
+                    <ul id="result-list" class="task-list"></ul>
+                    <div class="panel-actions">
+                        <button id="export-result-btn" class="export-button">📈 実績をCSV出力</button>
                     </div>
-                    <div id="timer-clock">00:00:00</div>
+                </div>
+            </div>
 
-                    <div class="actions">
+            <div>
+                <div class="panel" id="execution-panel">
+                    <h2>実行と分類</h2>
+                    <div id="current-task-display"><p>実行するタスクをクリックで選択</p></div>
+                    <div id="timer-clock">00:00:00</div>
+                    <div class="panel-actions">
                         <button id="start-btn" disabled>▶️ 開始/再開</button>
                         <button id="pause-btn" disabled>⏸️ 一時停止</button>
                         <button id="complete-btn" disabled>✅ 完了</button>
                         <button id="cancel-btn" disabled>⏹ 中止</button>
                     </div>
-
-                    <h3>割り込みタスク</h3>
-                    <form id="add-urgent-form" class="input-form">
-                        <input type="text" id="urgent-task-input" placeholder="タスク名">
-                        <div class="duration-input-wrapper">
-                            <input type="number" id="urgent-duration-input" min="1" value="1">
-                            <span>秒</span>
-                        </div>
-                        <button type="submit">最優先に追加</button>
-                    </form>
-
+                    <div>
+                        <h3>割り込みタスク</h3>
+                        <form id="add-urgent-form" class="input-form">
+                            <input type="text" id="urgent-task-input" placeholder="割り込みタスク名">
+                            <div class="duration-input-wrapper">
+                                <input type="number" id="urgent-duration-input" min="1" placeholder="秒">
+                                <span>秒</span>
+                            </div>
+                            <button type="submit">最優先に追加</button>
+                        </form>
+                    </div>
                     <div class="priority-grid">
-                        <div id="box-a" class="priority-box drop-zone">
+                        <div class="priority-box drop-zone" id="box-a">
                             <h3>🔥 緊急＆重要</h3>
                             <small>(今すぐ取り組むべき)</small>
-                            <ul id="box-a-list" class="task-list drop-zone"></ul>
+                            <ul id="box-a-list" class="task-list"></ul>
                         </div>
-
-                        <div id="box-b" class="priority-box drop-zone">
+                        <div class="priority-box drop-zone" id="box-b">
                             <h3>🌱 重要＆非緊急</h3>
                             <small>(計画的に取り組むべき)</small>
-                            <ul id="box-b-list" class="task-list drop-zone"></ul>
+                            <ul id="box-b-list" class="task-list"></ul>
                         </div>
-
-                        <div id="box-c" class="priority-box drop-zone">
+                        <div class="priority-box drop-zone" id="box-c">
                             <h3>⚡ 緊急＆非重要</h3>
                             <small>(移譲・効率化すべき)</small>
-                            <ul id="box-c-list" class="task-list drop-zone"></ul>
+                            <ul id="box-c-list" class="task-list"></ul>
                         </div>
-
-                        <div id="box-d" class="priority-box drop-zone">
+                        <div class="priority-box drop-zone" id="box-d">
                             <h3>🗑️ 非緊急 & 非重要</h3>
                             <small>(やめるべき)</small>
-                            <ul id="box-d-list" class="task-list drop-zone"></ul>
+                            <ul id="box-d-list" class="task-list"></ul>
                         </div>
                     </div>
                 </div>
             </div>
         </div>
 
-        <div id="times-up-modal" class="modal-overlay" style="display: none;">
+        <div class="modal-overlay" id="times-up-modal" style="display: none;">
             <div class="modal-content">
-                <h2 id="modal-title">⏰ 時間です！</h2>
+                <h2>⏰ 時間です！</h2>
                 <p id="modal-task-name"></p>
                 <div class="modal-actions">
                     <button id="modal-complete-btn" class="button-success">✅ 完了する</button>
-                    <button id="modal-extend-btn" class="modal-extend-btn">🕰️ 延長する</button>
-                    <button id="modal-cancel-btn" class="button-danger">⏸ 中止する</button>
+                    <button id="modal-extend-btn">🕰️ 延長する</button>
+                    <button id="modal-cancel-btn">⏸ 中止する</button>
                 </div>
             </div>
         </div>
 
-        <audio id="notification-sound" preload="auto">
-            <source src="notification.mp3" type="audio/mpeg">
+        <audio id="notification-sound">
+            <source src="https://www.soundjay.com/buttons/beep-01a.mp3" type="audio/mpeg">
         </audio>
     </div>
 </body>
