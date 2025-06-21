@@ -1,3 +1,13 @@
 {
-  "type": "module"
+  "name": "your-repo-name",
+  "version": "1.0.0",
+  "description": "Task management app",
+  "main": "app.mjs",
+  "type": "module",
+  "scripts": {
+    "start": "node app.mjs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
 }
