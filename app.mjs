@@ -5,38 +5,25 @@ document.addEventListener('DOMContentLoaded', () => {
     // =======================================================
 
     // Firebase SDKのインポート
-    //import { initializeApp } from "firebase/app";
-   // import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-   // import { getFirestore } from "firebase/firestore"; // Firestoreを使用する場合
-   // import { getAnalytics } from "firebase/analytics";
+    import { initializeApp } from "firebase/app";
+    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
+    import { getFirestore } from "firebase/firestore"; // Firestoreを使用する場合
+    import { getAnalytics } from "firebase/analytics";
 
     // Firebase設定
-   // const firebaseConfig = {
-   //     apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
-   //     authDomain: "my-private-task-manegment.firebaseapp.com",
-   //     projectId: "my-private-task-manegment",
-   //     storageBucket: "my-private-task-manegment.firebasestorage.app",
-   //     messagingSenderId: "272952129117",
-   //     appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4",
-   //     measurementId: "G-NRTVNKPLF6"
-   // };
+    const firebaseConfig = {
+        apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
+        authDomain: "my-private-task-manegment.firebaseapp.com",
+        projectId: "my-private-task-manegment",
+        storageBucket: "my-private-task-manegment.firebasestorage.app",
+        messagingSenderId: "272952129117",
+        appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4",
+        measurementId: "G-NRTVNKPLF6"
+    };
 
 //
 
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyAdMv_zeq5WdA3l2JsEPe3uQLFG_4Jp4To",
-  authDomain: "my-task-manegment.firebaseapp.com",
-  projectId: "my-task-manegment",
-  storageBucket: "my-task-manegment.firebasestorage.app",
-  messagingSenderId: "1081004250364",
-  appId: "1:1081004250364:web:fe78d16366ddbe953f3379"
-};
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
@@ -89,26 +76,28 @@ const app = initializeApp(firebaseConfig);
     logoutBtn.addEventListener('click', signOutUser);
 
     // 認証状態の監視
+
     onAuthStateChanged(auth, user => {
-        if (user) {
-            userName.textContent = user.displayName;
-            userPhoto.src = user.photoURL;
-            userInfo.style.display = 'flex';
-            logoutBtn.style.display = 'block';
-            loginBtn.style.display = 'none';
-            mainContent.style.display = 'block';
-            // Firestoreデータ読み込み例: loadDataForUser(user.uid);
-        } else {
-            userInfo.style.display = 'none';
-            logoutBtn.style.display = 'none';
-            loginBtn.style.display = 'block';
-            mainContent.style.display = 'none';
-            document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
-            document.getElementById('daily-goal').value = '';
-            document.getElementById('daily-journal').value = '';
-            resetExecutionPanel();
-        }
-    });
+    console.log('Auth state changed:', user); // デバッグ用ログ
+    if (user) {
+        userName.textContent = user.displayName;
+        userPhoto.src = user.photoURL;
+        userInfo.style.display = 'flex';
+        logoutBtn.style.display = 'block';
+        loginBtn.style.display = 'none';
+        mainContent.style.display = 'block';
+        // Firestore データ読み込み例: loadDataForUser(user.uid);
+    } else {
+        userInfo.style.display = 'none';
+        logoutBtn.style.display = 'none';
+        loginBtn.style.display = 'block';
+        mainContent.style.display = 'block'; // 初期状態で表示（デバッグ用）
+        document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
+        document.getElementById('daily-goal').value = '';
+        document.getElementById('daily-journal').value = '';
+        resetExecutionPanel();
+    }
+});
 
     // =======================================================
     // ===== 2. タスク管理・タイマー機能 =======================
@@ -386,7 +375,8 @@ const app = initializeApp(firebaseConfig);
         downloadCsv(csvContent, '計画');
     }
 
-    async function saveDailyData() {
+
+async function saveDailyData() {
     const user = auth.currentUser;
     if (!user) return;
     const dailyData = {
@@ -395,6 +385,7 @@ const app = initializeApp(firebaseConfig);
         timestamp: new Date()
     };
     try {
+        const { setDoc, doc } = firebase.firestore; // Firestore から setDoc と doc を取得
         await setDoc(doc(db, 'users', user.uid, 'daily', new Date().toISOString().split('T')[0]), dailyData);
         console.log('データ保存成功');
     } catch (error) {
