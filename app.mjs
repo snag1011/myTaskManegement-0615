@@ -1,106 +1,6 @@
-// app.js
 document.addEventListener('DOMContentLoaded', () => {
     // =======================================================
-    // ===== 1. Firebaseの初期設定と認証 ======================
-    // =======================================================
-
-    // Firebase SDKのインポート
-    import { initializeApp } from "firebase/app";
-    import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "firebase/auth";
-    import { getFirestore } from "firebase/firestore"; // Firestoreを使用する場合
-    import { getAnalytics } from "firebase/analytics";
-
-    // Firebase設定
-    const firebaseConfig = {
-        apiKey: "AIzaSyD2wKyop5H1UPxbK0VULfpUNAJ5tu4Ia88",
-        authDomain: "my-private-task-manegment.firebaseapp.com",
-        projectId: "my-private-task-manegment",
-        storageBucket: "my-private-task-manegment.firebasestorage.app",
-        messagingSenderId: "272952129117",
-        appId: "1:272952129117:web:e5ec8adbb79ed76291ffb4",
-        measurementId: "G-NRTVNKPLF6"
-    };
-
-//
-
-
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-    
-//
-
-    
-    // Firebase初期化
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    const auth = getAuth(app);
-    const provider = new GoogleAuthProvider();
-    const db = getFirestore(app); // Firestoreインスタンス
-
-    // 認証関連のDOM要素
-    const loginBtn = document.getElementById('login-btn');
-    const logoutBtn = document.getElementById('logout-btn');
-    const userInfo = document.getElementById('user-info');
-    const userName = document.getElementById('user-name');
-    const userPhoto = document.getElementById('user-photo');
-    const mainContent = document.getElementById('main-content');
-
-    // ログイン処理
-    const signIn = async () => {
-        try {
-            await signInWithPopup(auth, provider);
-        } catch (error) {
-            console.error("Googleログインに失敗しました:", error);
-            let errorMessage = "ログインに失敗しました。";
-            if (error.code === "auth/popup-closed-by-user") {
-                errorMessage = "ログインウィンドウが閉じられました。";
-            } else if (error.code === "auth/network-request-failed") {
-                errorMessage = "ネットワークエラーが発生しました。";
-            }
-            alert(errorMessage);
-        }
-    };
-
-    // ログアウト処理
-    const signOutUser = async () => {
-        try {
-            await signOut(auth);
-        } catch (error) {
-            console.error("ログアウトに失敗しました:", error);
-            alert("ログアウトに失敗しました。");
-        }
-    };
-
-    loginBtn.addEventListener('click', signIn);
-    logoutBtn.addEventListener('click', signOutUser);
-
-    // 認証状態の監視
-
-    onAuthStateChanged(auth, user => {
-    console.log('Auth state changed:', user); // デバッグ用ログ
-    if (user) {
-        userName.textContent = user.displayName;
-        userPhoto.src = user.photoURL;
-        userInfo.style.display = 'flex';
-        logoutBtn.style.display = 'block';
-        loginBtn.style.display = 'none';
-        mainContent.style.display = 'block';
-        // Firestore データ読み込み例: loadDataForUser(user.uid);
-    } else {
-        userInfo.style.display = 'none';
-        logoutBtn.style.display = 'none';
-        loginBtn.style.display = 'block';
-        mainContent.style.display = 'block'; // 初期状態で表示（デバッグ用）
-        document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
-        document.getElementById('daily-goal').value = '';
-        document.getElementById('daily-journal').value = '';
-        resetExecutionPanel();
-    }
-});
-
-    // =======================================================
-    // ===== 2. タスク管理・タイマー機能 =======================
+    // ===== 1. タスク管理・タイマー機能 =======================
     // =======================================================
 
     // 要素の取得
@@ -116,9 +16,9 @@ const app = initializeApp(firebaseConfig);
     const dropZones = document.querySelectorAll('.drop-zone');
     const saveDailyBtn = document.getElementById('save-daily-btn');
     const saveConfirmMsg = document.getElementById('save-confirm-msg');
-    const resultList = document.getElementById('result-list'); // 変数名を英語に変更
+    const resultList = document.getElementById('result-list');
     const exportPlanBtn = document.getElementById('export-plan-btn');
-    const exportResultBtn = document.getElementById('export-result-btn'); // 変数名を英語に変更
+    const exportResultBtn = document.getElementById('export-result-btn');
 
     const currentTaskDisplay = document.getElementById('current-task-display');
     const timerClock = document.getElementById('timer-clock');
@@ -156,6 +56,16 @@ const app = initializeApp(firebaseConfig);
     let wasExtended = false;
     let originalTitle = document.title;
 
+    // ローカルストレージからデータをロード
+    function loadDailyData() {
+        const dailyData = JSON.parse(localStorage.getItem('dailyData') || '{}');
+        if (dailyData.goal) document.getElementById('daily-goal').value = dailyData.goal;
+        if (dailyData.journal) document.getElementById('daily-journal').value = dailyData.journal;
+    }
+
+    // ページロード時にデータをロード
+    loadDailyData();
+
     // イベントリスナー（タスク管理）
     addPlanForm.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -177,18 +87,24 @@ const app = initializeApp(firebaseConfig);
             document.querySelectorAll('.task-list').forEach(list => list.innerHTML = '');
             document.getElementById('daily-goal').value = '';
             document.getElementById('daily-journal').value = '';
+            localStorage.removeItem('dailyData');
             resetExecutionPanel();
             alert('UI上のデータをリセットしました。');
         }
     });
     saveDailyBtn.addEventListener('click', () => {
+        const dailyData = {
+            goal: document.getElementById('daily-goal').value,
+            journal: document.getElementById('daily-journal').value,
+            timestamp: new Date().toISOString()
+        };
+        localStorage.setItem('dailyData', JSON.stringify(dailyData));
         saveConfirmMsg.textContent = '保存しました！';
         saveConfirmMsg.classList.add('show');
         setTimeout(() => saveConfirmMsg.classList.remove('show'), 2000);
-        // Firestore保存処理例: saveDailyData();
     });
     exportPlanBtn.addEventListener('click', exportPlanToCsv);
-    exportResultBtn.addEventListener('click', exportResultToCsv); // 変数名変更
+    exportResultBtn.addEventListener('click', exportResultToCsv);
     startBtn.addEventListener('click', startTimer);
     pauseBtn.addEventListener('click', pauseTimer);
     completeBtn.addEventListener('click', () => completeTask('完了'));
@@ -319,8 +235,8 @@ const app = initializeApp(firebaseConfig);
 
         let finalStatus;
         if (status === '中止') { finalStatus = { text: '中止', class: 'status-canceled' }; }
-        else if (wasExtended) { finalStatus = { text: '延長', class: 'status-extended' }; } // 修正済み
-        else if (diffSeconds > 0) { finalStatus = { text: '短縮', class: 'status-shortened' }; } // 修正済み
+        else if (wasExtended) { finalStatus = { text: '延長', class: 'status-extended' }; }
+        else if (diffSeconds > 0) { finalStatus = { text: '短縮', class: 'status-shortened' }; }
         else { finalStatus = { text: '計画通り', class: 'status-ontime' }; }
 
         addResultToList(currentSelectedTask.dataset, actualSeconds, diffSeconds, finalStatus);
@@ -355,7 +271,7 @@ const app = initializeApp(firebaseConfig);
             <span class="result-times">計画: ${data.duration}秒 / 実績: ${actualSeconds}秒</span>
             <span class="result-diff">時間差: ${diffSeconds >= 0 ? '+' : ''}${diffSeconds}秒</span>
         `;
-        resultList.appendChild(li); // 変数名変更
+        resultList.appendChild(li);
     }
 
     function exportPlanToCsv() {
@@ -375,27 +291,8 @@ const app = initializeApp(firebaseConfig);
         downloadCsv(csvContent, '計画');
     }
 
-
-async function saveDailyData() {
-    const user = auth.currentUser;
-    if (!user) return;
-    const dailyData = {
-        goal: document.getElementById('daily-goal').value,
-        journal: document.getElementById('daily-journal').value,
-        timestamp: new Date()
-    };
-    try {
-        const { setDoc, doc } = firebase.firestore; // Firestore から setDoc と doc を取得
-        await setDoc(doc(db, 'users', user.uid, 'daily', new Date().toISOString().split('T')[0]), dailyData);
-        console.log('データ保存成功');
-    } catch (error) {
-        console.error('データ保存失敗:', error);
-        alert('データの保存に失敗しました。');
-    }
-}
-
-    function exportResultToCsv() { // 関数名変更
-        const results = document.querySelectorAll('#result-list .result-item'); // セレクタ変更
+    function exportResultToCsv() {
+        const results = document.querySelectorAll('#result-list .result-item');
         if (results.length === 0) {
             alert('出力する実績がありません。');
             return;
@@ -432,8 +329,8 @@ async function saveDailyData() {
         resetTimer();
         updateExecutionButtons(false, false);
         hideModal();
-        timerClock.classList.remove('timer-flash'); // アニメーションリセット
-        document.title = originalTitle; // タイトルリセット
+        timerClock.classList.remove('timer-flash');
+        document.title = originalTitle;
     }
 
     function resetTimer() {
@@ -472,7 +369,7 @@ async function saveDailyData() {
             draggedItem.dataset.priority = newPriority;
 
             const targetList = dropZone.querySelector('.task-list') || dropZone;
-            if (targetList !== draggedItem.parentElement) { // 同一リスト内移動を防止
+            if (targetList !== draggedItem.parentElement) {
                 targetList.appendChild(draggedItem);
             }
             dropZone.classList.remove('drag-over');
@@ -489,5 +386,5 @@ async function saveDailyData() {
         return true;
     }
 
-    console.log('業務管理アプリが初期化されました。Ver.6.2 (Fixed Firebase, Notifications, and Drag-Drop)');
+    console.log('業務管理アプリが初期化されました。Ver.6.3 (Removed Firebase, Using localStorage)');
 });
